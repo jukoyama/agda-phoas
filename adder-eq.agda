@@ -94,17 +94,33 @@ _∎ e = R*Id e
 
 ------------------NumDefine-------------------------
 
+-- 1
+term1 : term Nat
+term1 = Val (Num 1)
+
+-- 2
+term2 : term Nat
+term2 = Val (Num 2)
+
 -- 3
 term3 : term Nat
 term3 = Val (Num 3)
+
+-- 4
+term4 : term Nat
+term4 = Val (Num 4)
 
 -- 5
 term5 : term Nat
 term5 = Val (Num 5)
 
--- 4
-term4 : term Nat
-term4 = Val (Num 4)
+-- 10
+term10 : term Nat
+term10 = Val (Num 10)
+
+--14
+term14 : term Nat
+term14 = Val (Num 14)
 
 -- 12
 term12 : term Nat
@@ -117,6 +133,10 @@ term35-4 = Add (Add term3 term5) term4
 -- 4 + (3 + 5)
 term4-35 : term Nat
 term4-35 = Add term4 (Add term3 term5)
+
+-- (2 + 4) + (3 + 5)
+term24-35 : term Nat
+term24-35 = Add (Add term2 term4) (Add term3 term5)
 
 ------------------Proof1-------------------------
 
@@ -142,4 +162,34 @@ test2 =
     Add term4 (Val (Num 8))
   ⟶⟨ RAdd refl ⟩
     term12
+  ∎
+
+------------------Proof3-------------------------
+
+-- (2 + 4) + (3 + 5) →* 14
+test3 : Reduce* term24-35 term14
+test3 =
+  begin
+    Add (Add term2 term4) (Add term3 term5)
+  ⟶⟨ RFrame (Add₁ ((Add term3 term5))) (RAdd refl) ⟩
+    Add (Val (Num 6)) (Add term3 term5)
+  ⟶⟨ RFrame (Add₂ ((Num 6))) (RAdd refl) ⟩
+    Add (Val (Num 6)) (Val (Num 8))
+  ⟶⟨ RAdd refl ⟩
+    term14
+  ∎
+
+------------------Proof4-------------------------
+
+-- (1 + 2) + 3 + 4
+test4 : Reduce* (Add (Add (Add term1 term2) term3) term4) term10
+test4 =
+  begin
+    (Add (Add (Add term1 term2) term3) term4)
+  ⟶⟨ RFrame (Add₁ term4) (RFrame (Add₁ term3) (RAdd refl)) ⟩
+    Add (Add (Val (Num 3)) term3) term4
+  ⟶⟨ RFrame (Add₁ term4) (RAdd refl) ⟩
+    Add (Val (Num 6)) term4
+  ⟶⟨ RAdd refl ⟩
+    term10
   ∎
