@@ -47,28 +47,109 @@ data Reduce : {τ₁ : typ} →
 
 data Reduce* : {τ₁ : typ} →
      term τ₁ → term τ₁ → Set where
-  R*Id  : {τ₁ : typ} →
-           (e : term τ₁) →
-           Reduce* e e
+  R*Id    : {τ₁ : typ} →
+            (e : term τ₁) →
+            Reduce* e e
   R*Trans : {τ₁ : typ} →
-           (e₁ : term τ₁) →
-           (e₂ : term τ₁) →
-           (e₃ : term τ₁) →
-           Reduce e₁ e₂ →
-           Reduce* e₂ e₃ →
-           Reduce* e₁ e₃
+            (e₁ : term τ₁) →
+            (e₂ : term τ₁) →
+            (e₃ : term τ₁) →
+            Reduce e₁ e₂ →
+            Reduce* e₂ e₃ →
+            Reduce* e₁ e₃
 
+------------------Proof1-------------------------
+
+ -- Proof of A + B
+
+-- 3
 term3 : term Nat
 term3 = Val (Num 3)
 
+-- 5
 term5 : term Nat
 term5 = Val (Num 5)
 
+-- 3 + 5
 term35 : term Nat
 term35 = Add term3 term5
 
+-- 8
 term8 : term Nat
 term8 = Val (Num 8)
 
+-- 3 + 5 ≡ 8
 test1 : Reduce term35 term8
 test1 = RAdd refl
+
+------------------Proof2-------------------------
+
+ -- Proof of (A + B) + C
+
+-- 4
+term4 : term Nat
+term4 = Val (Num 4)
+
+-- (3 + 5) + 4
+term35-4 : term Nat
+term35-4 = Add term35 term4
+
+-- 8 + 4
+term84 : term Nat
+term84 = Add term8 term4
+
+-- 12
+term12 : term Nat
+term12 = Val (Num 12)
+
+-- (3 + 5) + 4 → 8 + 4
+test2′ : Reduce term35-4 term84
+test2′ = RFrame (Add₁ (Val (Num 4))) (RAdd refl)
+
+-- 8 + 4 →  12
+test2 : Reduce term84 term12
+test2 = RAdd refl
+
+------------------Proof3-------------------------
+
+ -- Proof of (A + B) + C with multi steps
+
+-- 8 + 4 →* 12
+test3′ : Reduce* term84 term12
+test3′ = R*Trans term84 term12 term12 test2 (R*Id term12)
+
+-- (3 + 5) + 4 →* 12
+test3 : Reduce* term35-4 term12
+test3 = R*Trans term35-4 term84 term12 test2′ test3′
+
+------------------Proof4-------------------------
+
+ -- Proof of A + (B + C)
+
+-- 4 + (3 + 5)
+term4-35 : term Nat
+term4-35 = Add term4 term35
+
+-- 4 + 8
+term48 : term Nat
+term48 = Add term4 term8
+
+-- 4 + (3 + 5) → 4 + 8
+test4′ : Reduce term4-35 term48
+test4′ = RFrame (Add₂ (Num 4)) (RAdd refl)
+
+-- 4 + 8 → 12
+test4 : Reduce term48 term12
+test4 = RAdd refl
+
+------------------Proof5-------------------------
+
+ -- Proof of A + (B + C) with mutli steps
+
+-- 4 + 8 →* 12
+test5′ : Reduce* term48 term12
+test5′ = R*Trans term48 term12 term12 test4 (R*Id term12) 
+
+-- 4 + (3 + 5) →* 12
+test5 : Reduce* term4-35 term12
+test5 = R*Trans term4-35 term48 term12 test4′ test5′
