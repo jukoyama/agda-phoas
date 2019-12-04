@@ -19,7 +19,7 @@ mutual
   data term : typ → Set where
     Val : {τ : typ} → value τ → term τ
     Add : term Nat → term Nat → term Nat
-    -- If  : {τ : typ} → term Bool → value τ → value τ → term τ
+    Eq  : {τ : typ} →  term τ → term τ → term Bool 
     If  : {τ : typ} → term Bool → term τ → term τ → term τ
 
 -- frame
@@ -28,7 +28,10 @@ data frame[_] : typ → typ → Set where
          frame[ Nat ] Nat
   Add₂ : (v₁ : value Nat) →
          frame[ Nat ] Nat
-  If   : {τ : typ} →
+  FEq   : {τ : typ} →
+         (e₂ : term τ) →
+         frame[ τ ] Bool
+  FIf   : {τ : typ} →
          (e₁ : term τ) →
          (e₂ : term τ) →
          frame[ Bool ] τ
@@ -37,9 +40,10 @@ frame-plug : {τ₁ τ₂ : typ} →
              frame[ τ₂ ] τ₁ →
              term τ₂ →
              term τ₁
-frame-plug (Add₁ e₂) e₁ = Add e₁ e₂
-frame-plug (Add₂ v₁) e₂ = Add (Val v₁) e₂
-frame-plug (If e₁ e₂) b = If b e₁ e₂
+frame-plug (Add₁ e₂) e₁   = Add e₁ e₂
+frame-plug (Add₂ v₁) e₂   = Add (Val v₁) e₂
+frame-plug (FEq  e₂) e₁   = Eq e₁ e₂
+frame-plug (FIf  e₁ e₂) b = If b e₁ e₂
 
 -- reduction relation (= preservation)
 data Reduce : {τ₁ : typ} →
@@ -49,12 +53,16 @@ data Reduce : {τ₁ : typ} →
               {n  : ℕ} →
               n₁ + n₂ ≡ n →
               Reduce (Add (Val (Num n₁)) (Val (Num n₂))) (Val (Num n))
-  RIsTrue   : {b : value Bool} →
-              b ≡ True →
-              Reduce (Val b) (Val True)
-  RIsFalse  : {b : value Bool} →
-              b ≡ False →
-              Reduce (Val b) (Val False)
+  REq-true  : {τ : typ} →
+              {v₁ : value τ} →
+              {v₂ : value τ} →
+              v₁ ≡ v₂ →
+              Reduce (Eq (Val v₁) (Val v₂)) (Val True)
+  REq-false : {τ : typ} →
+              {v₁ : value τ} →
+              {v₂ : value τ} →
+              v₁ ≢ v₂ →
+              Reduce (Eq (Val v₁) (Val v₂)) (Val False)
   RIf-true  : {τ : typ} →
               {e₁ : term τ} →
               {e₂ : term τ} →
@@ -123,6 +131,9 @@ _∎ e = R*Id e
 term1 : term Nat
 term1 = Val (Num 1)
 
+term2 : term Nat
+term2 = Val (Num 2)
+
 term0 : term Nat
 term0 = Val (Num 0)
 
@@ -131,14 +142,22 @@ termif : term Nat
 termif = If (Val (True)) term1 term0
 
 -- if true then 1 else 0 ⟶ 1
-test1 : Reduce* termif term1
-test1 =
+-- test1 : Reduce* termif term1
+-- test1 =
+--   begin
+--     If (Val True) (Val (Num 1)) (Val (Num zero))
+--   ⟶⟨ RFrame (If (Val (Num 1)) (Val (Num zero))) (RIsTrue refl) ⟩
+--     frame-plug (If (Val (Num 1)) (Val (Num zero))) (Val True)
+--   ⟶⟨ RIf-true ⟩
+--     Val (Num 1)
+--   ∎
+
+test1′ : Reduce* termif term1
+test1′ =
   begin
     If (Val True) (Val (Num 1)) (Val (Num zero))
-  ⟶⟨ RFrame (If (Val (Num 1)) (Val (Num zero))) (RIsTrue refl) ⟩
-    frame-plug (If (Val (Num 1)) (Val (Num zero))) (Val True)
   ⟶⟨ RIf-true ⟩
-    Val (Num 1)
+    term1
   ∎
 
 ------------------Proof2-------------------------
@@ -148,12 +167,22 @@ termif2 : term Nat
 termif2 = If (Val True) (Add term1 term1) term0
 
 -- if true then 1 + 1 else 0 ⟶ 2
-test2 : Reduce* termif2 (Val (Num 2))
-test2 =
+-- test2 : Reduce* termif2 (Val (Num 2))
+-- test2 =
+--   begin
+--     If (Val True) (Add term1 term1) term0
+--   ⟶⟨ RFrame (If (Add term1 term1) term0) (RIsTrue refl) ⟩
+--     frame-plug (If (Add term1 term1) term0) (Val True)
+--   ⟶⟨ RIf-true ⟩
+--     Add term1 term1
+--   ⟶⟨ RAdd refl ⟩
+--     Val (Num 2)
+--   ∎
+
+test3 : Reduce* termif2 (Val (Num 2))
+test3 =
   begin
     If (Val True) (Add term1 term1) term0
-  ⟶⟨ RFrame (If (Add term1 term1) term0) (RIsTrue refl) ⟩
-    frame-plug (If (Add term1 term1) term0) (Val True)
   ⟶⟨ RIf-true ⟩
     Add term1 term1
   ⟶⟨ RAdd refl ⟩
@@ -162,4 +191,42 @@ test2 =
 
 ------------------Proof3-------------------------
 
--- if 1 = 1 then 1 else 0
+-- 1 ≡ 1 ⟶ true
+test4 : Reduce* (Eq term1 term1) (Val True)
+test4 =
+  begin
+    Eq (Val (Num 1)) (Val (Num 1))
+  ⟶⟨ REq-true refl ⟩
+    Val True
+  ∎
+
+-- 1 ≡ 2 ⟶ false
+test4′ : Reduce* (Eq term1 term2) (Val False)
+test4′ =
+  begin
+    Eq term1 term2
+  ⟶⟨ REq-false (λ ()) ⟩
+    Val False
+  ∎
+
+-- 1 + 1 ≡ 2 → true
+-- test5 : Reduce* (Eq (Add term1 term1) term2) (Val True)
+-- test5 =
+--   begin
+--     Eq (Add (Val (Num 1)) (Val (Num 1))) (Val (Num 2))
+--   ⟶⟨ RFrame (FEq term2) (RAdd refl) ⟩
+--     frame-plug (Eq term2) (Val (Num (1 + 1)))
+--   ⟶⟨ REq-true refl ⟩
+--     Val True
+--   ∎
+
+-- 1 + 1 ≡ 1 + 1 ⟶ true
+-- test6 : Reduce* (Eq (Add term1 term1) (Add term1 term1)) (Val True)
+-- test6 =
+--   begin
+--     Eq (Add term1 term1) (Add term1 term1)
+--   ⟶⟨ RFrame (Eq (Add term1 term1)) (RAdd refl) ⟩
+--     frame-plug (Eq (Add term1 term1)) (Val (Num (1 + 1)))
+--   ⟶⟨ {!!} ⟩
+--     {!!}
+--   ∎
