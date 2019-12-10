@@ -175,7 +175,6 @@ create-meta-cons : (n : ℕ) → (consName : Name) → (hole : Term) → TC (Lis
 create-meta-cons n consName hole =
   create-multi-meta n >>= λ ms →
   unify hole (con consName ms) >>= λ _ →
-  -- unify hole できているのか....?
   returnTC ms
 
 -- (未使用)
@@ -185,7 +184,9 @@ list-to-TC []                         = returnTC tt
 list-to-TC (arg _ currentgoal ∷ rest) = list-to-TC rest
 
 counter-reduce : (n : ℕ) → (hole : Term) → TC ⊤
-counter-reduce zero    hole = typeError (strErr "time out" ∷ [])
+counter-reduce zero    hole =
+  -- typeError (strErr "time out" ∷ [])
+  returnTC tt
 counter-reduce (suc n) hole = inferType hole >>=
     λ { (def (quote Reduce)
               (_ ∷ arg _ a ∷ _ ∷ []))
@@ -200,7 +201,7 @@ counter-reduce (suc n) hole = inferType hole >>=
                     -- Add ((value τ) (value τ)) のときは RAdd
                     λ { (con (quote Val) _) →
                        newMeta unknown >>= λ m →
-                       -- DELETE : hole を作る関数を作ってみたがかえってわかりにくくなったのでいずれ消す
+                       -- DELETE : hole を作る関数を作ってみたが使えそうにないので後で消す
                        -- create-meta-cons 1 (quote RAdd) hole >>= λ ms →
                        -- list-to-TC ms
                        -- refl が入らないときは 穴を抜けられないのでこれ良さそう
@@ -270,10 +271,30 @@ test1 = Add term3 term5 ⟶⟨ RAdd refl ⟩ Val (Num 8) ∎
 --     Val (Num 8)
 --   ∎
 
+
+
+
+
+
+
 -- (3 + 5) + 4
-test2 : Reduce* term35-4 term12
-test2 = term35-4 ⟶⟨ RFrame (Add₁ term4) (RAdd refl) ⟩
-          Add (Val (Num 8)) term4 ⟶⟨ RAdd refl ⟩ term12 ∎
+test2 : Reduce* (Add (Add term3 term5) term4) term12
+test2 = {!unify-reduce!}
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- test2 = term35-4 ⟶⟨ RFrame (Add₁ term4) (RAdd refl) ⟩
+--           Add (Val (Num 8)) term4 ⟶⟨ RAdd refl ⟩ term12 ∎
 -- test2 =
 --   begin
 --     Add (Add (Val (Num 3)) (Val (Num 5))) (Val (Num 4))
