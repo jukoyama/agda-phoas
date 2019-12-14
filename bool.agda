@@ -1,3 +1,5 @@
+-- 足し算言語にif文を追加したもの
+
 module bool where
 
 open import Relation.Binary.PropositionalEquality
@@ -142,18 +144,8 @@ termif : term Nat
 termif = If (Val (True)) term1 term0
 
 -- if true then 1 else 0 ⟶ 1
--- test1 : Reduce* termif term1
--- test1 =
---   begin
---     If (Val True) (Val (Num 1)) (Val (Num zero))
---   ⟶⟨ RFrame (If (Val (Num 1)) (Val (Num zero))) (RIsTrue refl) ⟩
---     frame-plug (If (Val (Num 1)) (Val (Num zero))) (Val True)
---   ⟶⟨ RIf-true ⟩
---     Val (Num 1)
---   ∎
-
-test1′ : Reduce* termif term1
-test1′ =
+test1 : Reduce* termif term1
+test1 =
   begin
     If (Val True) (Val (Num 1)) (Val (Num zero))
   ⟶⟨ RIf-true ⟩
@@ -167,20 +159,8 @@ termif2 : term Nat
 termif2 = If (Val True) (Add term1 term1) term0
 
 -- if true then 1 + 1 else 0 ⟶ 2
--- test2 : Reduce* termif2 (Val (Num 2))
--- test2 =
---   begin
---     If (Val True) (Add term1 term1) term0
---   ⟶⟨ RFrame (If (Add term1 term1) term0) (RIsTrue refl) ⟩
---     frame-plug (If (Add term1 term1) term0) (Val True)
---   ⟶⟨ RIf-true ⟩
---     Add term1 term1
---   ⟶⟨ RAdd refl ⟩
---     Val (Num 2)
---   ∎
-
-test3 : Reduce* termif2 (Val (Num 2))
-test3 =
+test2 : Reduce* termif2 (Val (Num 2))
+test2 =
   begin
     If (Val True) (Add term1 term1) term0
   ⟶⟨ RIf-true ⟩
@@ -192,8 +172,8 @@ test3 =
 ------------------Proof3-------------------------
 
 -- 1 ≡ 1 ⟶ true
-test4 : Reduce* (Eq term1 term1) (Val True)
-test4 =
+test3 : Reduce* (Eq term1 term1) (Val True)
+test3 =
   begin
     Eq (Val (Num 1)) (Val (Num 1))
   ⟶⟨ REq-true refl ⟩
@@ -201,8 +181,8 @@ test4 =
   ∎
 
 -- 1 ≡ 2 ⟶ false
-test4′ : Reduce* (Eq term1 term2) (Val False)
-test4′ =
+test4 : Reduce* (Eq term1 term2) (Val False)
+test4 =
   begin
     Eq term1 term2
   ⟶⟨ REq-false (λ ()) ⟩
@@ -210,23 +190,46 @@ test4′ =
   ∎
 
 -- 1 + 1 ≡ 2 → true
--- test5 : Reduce* (Eq (Add term1 term1) term2) (Val True)
--- test5 =
---   begin
---     Eq (Add (Val (Num 1)) (Val (Num 1))) (Val (Num 2))
---   ⟶⟨ RFrame (FEq term2) (RAdd refl) ⟩
---     frame-plug (Eq term2) (Val (Num (1 + 1)))
---   ⟶⟨ REq-true refl ⟩
---     Val True
---   ∎
+test5 : Reduce* (Eq (Add term1 term1) term2) (Val True)
+test5 =
+  begin
+    Eq (Add term1 term1) term2
+  ⟶⟨ RFrame (FEq (Val (Num 2))) (RAdd refl) ⟩
+    frame-plug (FEq (Val (Num 2))) (Val (Num (1 + 1)))
+  ⟶⟨ REq-true refl ⟩
+    Val True
+  ∎
 
--- 1 + 1 ≡ 1 + 1 ⟶ true
+-- if 1 = 1 then 1 else 0 ⟶ 1
+test6 : Reduce* (If (Eq term1 term1) term1 term0) term1
+test6 =
+  begin
+    If (Eq term1 term1) term1 term0
+  ⟶⟨ RFrame (FIf term1 term0) (REq-true refl) ⟩
+    frame-plug (FIf term1 term0) (Val True)
+  ⟶⟨ RIf-true ⟩
+    term1
+  ∎
+
+-- if 1 = 2 then 1 else 0 ⟶ 0
+test7 : Reduce* (If (Eq term1 term2) term1 term0) term0
+test7 =
+  begin
+    If (Eq term1 term2) term1 term0
+  ⟶⟨ RFrame (FIf term1 term0) (REq-false (λ ())) ⟩
+    frame-plug (FIf term1 term0) (Val False)
+  ⟶⟨ RIf-false ⟩
+    term0
+  ∎
+
+-- -- 1 + 1 ≡ 1 + 1 ⟶ true
 -- test6 : Reduce* (Eq (Add term1 term1) (Add term1 term1)) (Val True)
 -- test6 =
 --   begin
 --     Eq (Add term1 term1) (Add term1 term1)
---   ⟶⟨ RFrame (Eq (Add term1 term1)) (RAdd refl) ⟩
---     frame-plug (Eq (Add term1 term1)) (Val (Num (1 + 1)))
+--   ⟶⟨ RFrame (FEq (Add term1 term1)) (RAdd refl) ⟩
+--     frame-plug (FEq (Add term1 term1)) (Val (Num (1 + 1)))
 --   ⟶⟨ {!!} ⟩
 --     {!!}
 --   ∎
+
