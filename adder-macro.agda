@@ -263,93 +263,95 @@ macro
 
 -- 3 + 5 ⟶ 8
 test1 : Reduce* (Add term3 term5) (Val (Num 8))
-test1 = Add term3 term5 ⟶⟨ RAdd refl ⟩ Val (Num 8) ∎
--- test1 =
---   begin
---     Add term3 term5
---   ⟶⟨ RAdd refl ⟩
---     Val (Num 8)
---   ∎
+test1 =
+  begin
+    Add term3 term5
+  ⟶⟨ RAdd refl ⟩
+    Val (Num 8)
+  ∎
 
-
-
-
-
+-- auto
+test1′ : Reduce* (Add term3 term5) (Val (Num 8))
+test1′ = Add term3 term5 ⟶⟨ RAdd refl ⟩ Val (Num 8) ∎
 
 
 -- (3 + 5) + 4
-test2 : Reduce* (Add (Add term3 term5) term4) term12
-test2 = {!unify-reduce!}
+test2 : Reduce* (Add (Add (Val (Num 3)) (Val (Num 5))) (Val (Num 4)))
+                (Val (Num 12))
+test2 =
+  begin
+    Add (Add (Val (Num 3)) (Val (Num 5))) (Val (Num 4))
+  ⟶⟨ RFrame (Add₁ (Val (Num 4))) (RAdd refl) ⟩
+    frame-plug (Add₁ (Val (Num 4))) (Val (Num (3 + 5)))
+  ⟶⟨ RAdd refl ⟩
+    term12
+  ∎
 
+-- auto
+test2′ : Reduce* (Add (Add (Val (Num 3)) (Val (Num 5))) (Val (Num 4)))
+                (Val (Num 12))
+test2′ = term35-4 ⟶⟨ RFrame (Add₁ term4) (RAdd refl) ⟩
+          Add (Val (Num 8)) term4 ⟶⟨ RAdd refl ⟩ term12 ∎
 
-
-
-
-
-
-
-
-
-
-
-
--- test2 = term35-4 ⟶⟨ RFrame (Add₁ term4) (RAdd refl) ⟩
---           Add (Val (Num 8)) term4 ⟶⟨ RAdd refl ⟩ term12 ∎
--- test2 =
---   begin
---     Add (Add (Val (Num 3)) (Val (Num 5))) (Val (Num 4))
---   ⟶⟨ RFrame (Add₁ (Val (Num 4))) (RAdd refl) ⟩
---     frame-plug (Add₁ (Val (Num 4))) (Val (Num (3 + 5)))
---   ⟶⟨ RAdd refl ⟩
---     term12
---   ∎
 
 -- 4 + (3 + 5)
 test3 : Reduce* term4-35 term12
-test3 = term4-35 ⟶⟨ RFrame (Add₂ (Num 4)) (RAdd refl) ⟩
+test3 =
+  begin
+    Add (Val (Num 4)) (Add (Val (Num 3)) (Val (Num 5)))
+   ⟶⟨ RFrame (Add₂ (Num 4)) (RAdd refl) ⟩
+    frame-plug (Add₂ (Num 4)) (Val (Num (3 + 5)))
+   ⟶⟨ RAdd refl ⟩
+    term12
+   ∎
+
+-- auto
+test3′ : Reduce* term4-35 term12
+test3′ = term4-35 ⟶⟨ RFrame (Add₂ (Num 4)) (RAdd refl) ⟩
           Add (Val (Num 4)) (Val (Num 8)) ⟶⟨ RAdd refl ⟩ term12 ∎
--- test3 =
---   begin
---     Add (Val (Num 4)) (Add (Val (Num 3)) (Val (Num 5)))
---    ⟶⟨ RFrame (Add₂ (Num 4)) (RAdd refl) ⟩
---     frame-plug (Add₂ (Num 4)) (Val (Num (3 + 5)))
---    ⟶⟨ RAdd refl ⟩
---     term12
---    ∎
+
 
 -- (2 + 4) + (3 + 5) ⟶* 14
 test4 : Reduce* (Add (Add (Val (Num 2)) (Val (Num 4))) (Add term3 term5)) (Val (Num 14))
-test4 = Add (Add (Val (Num 2)) (Val (Num 4))) (Add term3 term5) ⟶⟨
+test4 =
+  begin
+    Add (Add (Val (Num 2)) (Val (Num 4))) (Add term3 term5)
+  ⟶⟨ RFrame (Add₁ (Add term3 term5)) (RAdd refl) ⟩
+    frame-plug (Add₁ (Add term3 term5)) (Val (Num (2 + 4)))
+  ⟶⟨ RFrame (Add₂ (Num 6)) (RAdd refl) ⟩
+    frame-plug (Add₂ (Num 6)) (Val (Num (3 + 5)))
+  ⟶⟨ RAdd refl ⟩
+    Val (Num 14)
+  ∎
+
+-- auto
+test4′ : Reduce* (Add (Add (Val (Num 2)) (Val (Num 4))) (Add term3 term5)) (Val (Num 14))
+test4′ = Add (Add (Val (Num 2)) (Val (Num 4))) (Add term3 term5) ⟶⟨
           RFrame (Add₁ (Add term3 term5)) (RAdd refl) ⟩
           Add (Val (Num 6)) (Add term3 term5) ⟶⟨
           RFrame (Add₂ (Num 6)) (RAdd refl) ⟩
           Add (Val (Num 6)) (Val (Num 8)) ⟶⟨ RAdd refl ⟩ Val (Num 14) ∎
--- test4 =
---   begin
---     Add (Add (Val (Num 2)) (Val (Num 4))) (Add term3 term5)
---   ⟶⟨ RFrame (Add₁ (Add term3 term5)) (RAdd refl) ⟩
---     frame-plug (Add₁ (Add term3 term5)) (Val (Num (2 + 4)))
---   ⟶⟨ RFrame (Add₂ (Num 6)) (RAdd refl) ⟩
---     frame-plug (Add₂ (Num 6)) (Val (Num (3 + 5)))
---   ⟶⟨ RAdd refl ⟩
---     Val (Num 14)
---   ∎
+
 
 -- 1 + (2 + 3) + 4
 test5 : Reduce* (Add term1 (Add (Add term2 term3) term4)) (Val (Num 10))
-test5 = Add term1 (Add (Add term2 term3) term4) ⟶⟨
+test5 =
+  begin
+    Add term1 (Add (Add term2 term3) term4)
+  ⟶⟨ RFrame (Add₂ (Num 1)) (RFrame (Add₁ term4) (RAdd refl)) ⟩
+    frame-plug (Add₂ (Num 1)) (frame-plug (Add₁ term4) (Val (Num (2 + 3))))
+  ⟶⟨ RFrame (Add₂ (Num 1)) (RAdd refl) ⟩
+    frame-plug (Add₂ (Num 1)) (Val (Num (2 + 3 + 4)))
+  ⟶⟨ RAdd refl ⟩
+    Val (Num 10)
+  ∎
+
+-- auto
+test5′ : Reduce* (Add term1 (Add (Add term2 term3) term4)) (Val (Num 10))
+test5′ = Add term1 (Add (Add term2 term3) term4) ⟶⟨
           RFrame (Add₂ (Num 1)) (RFrame (Add₁ term4) (RAdd refl)) ⟩
           Add (Val (Num 1)) (Add (Val (Num 5)) term4) ⟶⟨
           RFrame (Add₂ (Num 1)) (RAdd refl) ⟩
           Add (Val (Num 1)) (Val (Num 9)) ⟶⟨ RAdd refl ⟩ Val (Num 10) ∎
--- test5 =
---   begin
---     Add term1 (Add (Add term2 term3) term4)
---   ⟶⟨ RFrame (Add₂ (Num 1)) (RFrame (Add₁ term4) (RAdd refl)) ⟩
---     frame-plug (Add₂ (Num 1)) (frame-plug (Add₁ term4) (Val (Num (2 + 3))))
---   ⟶⟨ RFrame (Add₂ (Num 1)) (RAdd refl) ⟩
---     frame-plug (Add₂ (Num 1)) (Val (Num (2 + 3 + 4)))
---   ⟶⟨ RAdd refl ⟩
---     Val (Num 10)
---   ∎
+
 
