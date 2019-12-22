@@ -237,3 +237,68 @@ test4 =
   ⟶⟨ RBeta (sVal sVar=) ⟩
     Val (Num 3)
   ∎
+
+{----------------Term Definition----------------}
+
+-- FROM : TYPE THEORY ... Chapter2.Simply Typed Lambda Calculus
+
+-- one : (α → α) → α → α
+-- one := λfx.fx
+one : {var : typ → Set} → term[ var ] ((Nat ⇒ Nat) ⇒ (Nat ⇒ Nat))
+one = Val (Abst (λ f → Val (Abst
+                   (λ x → App (Val (Var f)) (Val (Var x))))))
+
+-- two : (α → α) → α → α
+-- two := λfx.f(fx)
+two : {var : typ → Set} → term[ var ] ((Nat ⇒ Nat) ⇒ (Nat ⇒ Nat))
+two = Val (Abst (λ f → Val (Abst
+                   (λ x → App (Val (Var f)) (App (Val (Var f)) (Val (Var x)))))))
+
+
+-- add : ((α → α) → (α → α)) → ((α → α) → (α → α)) → (α → α) → α → α
+-- add := λmnfx.mf(nfx)
+add : {var : typ → Set} → term[ var ] (((Nat ⇒ Nat) ⇒ (Nat ⇒ Nat)) ⇒
+                                      (((Nat ⇒ Nat) ⇒ (Nat ⇒ Nat)) ⇒
+                                      ((Nat ⇒ Nat) ⇒
+                                      (Nat ⇒ Nat))))
+add = Val (Abst λ m → Val (Abst
+                     (λ n → Val (Abst
+                       (λ f → Val (Abst
+                         (λ x → App (App (Val (Var m)) (Val (Var f)))
+                                     (App (App (Val (Var n)) (Val (Var f)))
+                                          (Val (Var x))))))))))
+
+
+--     (@ (@ λmnfx.mf(nfx) λfx.fx) one)
+-- ⟶ App₁ (@ λnfx.(λfx.fx)f(nfx) λfx.fx)
+-- ⟶ App₁ λfx.(@ (λfx.fx) f) ((λfx.fx)fx) -- ここまでしかReduceできない...
+
+-- ⟶ λfx.(λx.fx)((@ (λfx.fx) f) x)
+-- ⟶ λfx.(λx.fx)(@ (λx.fx) x)
+-- ⟶ λfx.(@ (λx.fx) (fx))
+-- ⟶ λfx.f(fx)
+
+-- add one one ⟶ two
+test5 : {var : typ → Set} →
+  Reduce* {var}  (App (App add one) one) two
+test5 =
+  begin
+    App (App add one) one
+  ⟶⟨ RFrame (App₁ one) (RBeta (sVal (sFun λ x → sVal
+                                      (sFun λ x₁ → sVal
+                                      (sFun (λ x₂ → sApp)))))) ⟩
+    frame-plug (App₁ one) (Val (Abst (λ n → Val (Abst
+                                     (λ f → Val (Abst
+                                     (λ x → App (App one (Val (Var f)))
+                                                (App (App (Val (Var n)) (Val (Var f)))
+                                                     (Val (Var x))))))))))                                       
+  ⟶⟨ RBeta (sVal (sFun λ x → sVal (sFun (λ x₁ → sApp)))) ⟩
+    Val (Abst λ f → Val (Abst (λ x → App (App one (Val (Var f)))
+                                          (App (App one (Val (Var f)))
+                                          (Val (Var x))))))
+  ⟶⟨ {!!} ⟩
+    {!!}
+  ⟶⟨ {!!} ⟩
+    {!!}
+  ∎
+
