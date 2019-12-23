@@ -6,6 +6,8 @@ open import Data.Nat
 open import Function
 open import Relation.Binary.PropositionalEquality using (_≡_; refl)
 
+infixr 5 _⇒_
+
 -- type
 data typ : Set where
   Nat  : typ
@@ -38,44 +40,55 @@ mutual
     (var τ → value[ var ] τ₁) → value[ var ] τ → value[ var ] τ₁ → Set where
     -- (λx.x)[v] → v
     sVar= : {τ : typ} → {v : value[ var ] τ} →
-      SubstVal (λ x → Var x) v v
+            SubstVal (λ x → Var x) v v
     -- (λx.y)[v] → y
     sVar≠ : {τ τ₁ : typ} → {x : var τ₁} → {v : value[ var ] τ} → 
-      SubstVal (λ y → Var x) v (Var x)
+            SubstVal (λ y → Var x) v (Var x)
     -- (λx.n)[v] → n
     sNum  : {τ : typ} → {n : ℕ} → {v : value[ var ] τ} →
-      SubstVal (λ y → Num n) v (Num n)
+            SubstVal (λ y → Num n) v (Num n)
     -- (λy.λx.ey)[v] → λx.e'
     sFun  : {τ τ₁ τ₂ : typ} →
-      {e  : var τ → var τ₂ → term[ var ] τ₁} → {v : value[ var ] τ} →
-      {e′ : var τ₂ → term[ var ] τ₁} →
-      ((x : var τ₂) → Subst (λ y → (e y) x) v (e′ x)) →
-      SubstVal (λ y → (Abst (e y))) v (Abst e′)
+            {e  : var τ → var τ₂ → term[ var ] τ₁} →
+            {v : value[ var ] τ} →
+            {e′ : var τ₂ → term[ var ] τ₁} →
+            ((x : var τ₂) →
+            Subst (λ y → (e y) x) v (e′ x)) →
+            SubstVal (λ y → (Abst (e y))) v (Abst e′)
 
   data Subst {var : typ → Set} : {τ τ₁ : typ} →
-    (var τ → term[ var ] τ₁) → value[ var ] τ → term[ var ] τ₁ → Set where
+             (var τ → term[ var ] τ₁) →
+             value[ var ] τ →
+             term[ var ] τ₁ → Set where
     sVal : {τ τ₁ : typ} →
-      {v₁ : var τ → value[ var ] τ₁} → {v : value[ var ] τ} → {v₁′ : value[ var ] τ₁} →
-      SubstVal v₁ v v₁′ →
-      Subst (λ y → Val (v₁ y)) v (Val v₁′)
+           {v₁ : var τ → value[ var ] τ₁} →
+           {v : value[ var ] τ} →
+           {v₁′ : value[ var ] τ₁} →
+           SubstVal v₁ v v₁′ →
+           Subst (λ y → Val (v₁ y)) v (Val v₁′)
     sApp : {τ τ₁ τ₂ : typ} →
-      {e₁ : var τ → term[ var ] (τ₂ ⇒ τ₁)} →
-      {e₂ : var τ → term[ var ] τ₂} →
-      {v : value[ var ] τ} →
-      {e₁′ : term[ var ] (τ₂ ⇒ τ₁)} →
-      {e₂′ : term[ var ] τ₂} →
-      Subst (λ y → App (e₁ y) (e₂ y)) v (App e₁′ e₂′)
+           {e₁ : var τ → term[ var ] (τ₂ ⇒ τ₁)} →
+           {e₂ : var τ → term[ var ] τ₂} →
+           {v : value[ var ] τ} →
+           {e₁′ : term[ var ] (τ₂ ⇒ τ₁)} →
+           {e₂′ : term[ var ] τ₂} →
+           Subst e₁ v e₁′ → Subst e₂ v e₂′ →
+           Subst (λ y → App (e₁ y) (e₂ y)) v (App e₁′ e₂′)
 
 -- E = [] | EM | VE 
 -- frame
 data frame[_,_] (var : typ → Set) : typ → typ → Set where
-  App₁ : {τ₁ τ₂ : typ} → (e₂ : term[ var ] τ₂) →
-    frame[ var , τ₂ ⇒ τ₁ ] τ₁
-  App₂ : {τ₁ τ₂ : typ} → (v₁ : value[ var ] (τ₂ ⇒ τ₁)) →
-    frame[ var , τ₂ ] τ₁
+  App₁ : {τ₁ τ₂ : typ} →
+         (e₂ : term[ var ] τ₂) →
+         frame[ var , τ₂ ⇒ τ₁ ] τ₁
+  App₂ : {τ₁ τ₂ : typ} →
+         (v₁ : value[ var ] (τ₂ ⇒ τ₁)) →
+         frame[ var , τ₂ ] τ₁
 
 frame-plug : {var : typ → Set} → {τ₁ τ₂ : typ} →
-             frame[ var , τ₂ ] τ₁ → term[ var ] τ₂ → term[ var ] τ₁
+             frame[ var , τ₂ ] τ₁ →
+             term[ var ] τ₂ →
+             term[ var ] τ₁
 frame-plug (App₁ e₂) e₁ = App e₁ e₂
 frame-plug (App₂ v₁) e₂ = App (Val v₁) e₂
 
@@ -84,11 +97,11 @@ data Reduce {var : typ → Set} : {τ : typ} →
      term[ var ] τ → term[ var ] τ → Set where
   -- E[ (λx.e) v ] → E[ e′= e [v/x] ]
   RBeta : {τ₁ τ₂ : typ} →
-    {e  : (x : var τ₂) → term[ var ] τ₁} →
-    {v  : value[ var ] τ₂} →
-    {e′ : term[ var ] τ₁} →
-    Subst e v e′ →
-    Reduce (App (Val (Abst e)) (Val v)) e′
+          {e  : (x : var τ₂) → term[ var ] τ₁} →
+          {v  : value[ var ] τ₂} →
+          {e′ : term[ var ] τ₁} →
+          Subst e v e′ →
+          Reduce (App (Val (Abst e)) (Val v)) e′
   RFrame : {τ₁ τ₂ : typ} →
            {e : term[ var ] τ₁} →
            {e′ : term[ var ] τ₁} →
@@ -97,7 +110,7 @@ data Reduce {var : typ → Set} : {τ : typ} →
            Reduce (frame-plug f e) (frame-plug f e′)
 
 data Reduce* {var : typ → Set} : {τ₁ : typ} →
-     term[ var ] τ₁ → term[ var ] τ₁ → Set where
+             term[ var ] τ₁ → term[ var ] τ₁ → Set where
   R*Id  : {τ₁ : typ} →
            (e : term[ var ] τ₁) →
            Reduce* e e
@@ -286,19 +299,24 @@ test5 =
     App (App add one) one
   ⟶⟨ RFrame (App₁ one) (RBeta (sVal (sFun λ x → sVal
                                       (sFun λ x₁ → sVal
-                                      (sFun (λ x₂ → sApp)))))) ⟩
-    frame-plug (App₁ one) (Val (Abst (λ n → Val (Abst
-                                     (λ f → Val (Abst
-                                     (λ x → App (App one (Val (Var f)))
-                                                (App (App (Val (Var n)) (Val (Var f)))
-                                                     (Val (Var x))))))))))                                       
-  ⟶⟨ RBeta (sVal (sFun λ x → sVal (sFun (λ x₁ → sApp)))) ⟩
-    Val (Abst λ f → Val (Abst (λ x → App (App one (Val (Var f)))
-                                          (App (App one (Val (Var f)))
-                                          (Val (Var x))))))
-  ⟶⟨ {!!} ⟩
-    {!!}
-  ⟶⟨ {!!} ⟩
-    {!!}
+                                      (sFun (λ x₂ → sApp (sApp (sVal sVar=) (sVal sVar≠))
+                                                         (sApp (sApp (sVal sVar≠) (sVal sVar≠))
+                                                         (sVal sVar≠)))))))) ⟩
+    frame-plug (App₁ one) ((Val (Abst (λ n → Val (Abst
+                                      (λ f → Val (Abst
+                                      (λ x → App (App one (Val (Var f)))
+                                                 (App (App (Val (Var n)) (Val (Var f)))
+                                                      (Val (Var x)))))))))))                                                         
+  ⟶⟨ RBeta (sVal (sFun (λ x → sVal (sFun (λ f → sApp (sApp (sVal (sFun (λ x₁ → sVal (sFun
+                                                                          (λ x₂ → sApp (sVal sVar≠)
+                                                              (sVal sVar≠))))))
+                                                        (sVal sVar≠))
+                                                   (sApp (sApp (sVal sVar=) (sVal sVar≠))
+                                                         (sVal sVar≠))))))) ⟩
+    Val (Abst (λ f → Val (Abst (λ x → App (App one (Val (Var f)))
+                                           (App (App one (Val (Var f)))
+                                                (Val (Var x)))))))
+  ≡⟨ {!!} ⟩
+    two
   ∎
 
