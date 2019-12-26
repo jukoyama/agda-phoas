@@ -184,32 +184,28 @@ vra = arg (arg-info visible relevant)
 hra : {A : Set} → A → Arg A
 hra = arg (arg-info hidden relevant)
 
-unify-begin⟶ : (hole : Term) → TC ⊤
-unify-begin⟶ hole =
-  newMeta unknown >>= λ m₁ →
-  newMeta unknown >>= λ m₂ →
-  newMeta unknown >>= λ m₃ →
-  newMeta unknown >>= λ m₄ →
-  newMeta unknown >>= λ m₅ →
-  newMeta unknown >>= λ m₆ →
-  unify hole (def (quote begin_) (vra (def (quote _⟶⟨_⟩_)
-                                           (vra m₁ ∷ vra m₂ ∷ vra m₃ ∷ []))
-                                 ∷ []))
-
 counter-reduce : (n : ℕ) → (hole : Term) → TC ⊤
 counter-reduce zero hole    = typeError (strErr "time out" ∷ [])
 counter-reduce (suc n) hole = inferType hole >>=
   λ {(def (quote Reduce*) args) →
-      unify-begin⟶ hole
-     -- catchTC
-     -- (unify m₃ (def (quote _∎) (vra m₄ ∷ [])) >>= λ _ →
-     --  counter-reduce n m₂)
-     -- (unify m₃ (def (quote _⟶⟨_⟩_) (vra m₄
-     --                                 ∷ vra m₅
-     --                                 ∷ vra m₆
-     --                                 ∷ [])) >>= λ _ →
-     --  counter-reduce n m₂ >>= λ _ →
-     --  counter-reduce n m₃)
+      newMeta unknown >>= λ m₁ →
+      newMeta unknown >>= λ m₂ →
+      newMeta unknown >>= λ m₃ →
+      newMeta unknown >>= λ m₄ →
+      newMeta unknown >>= λ m₅ →
+      newMeta unknown >>= λ m₆ →
+      unify hole (def (quote begin_) (vra (def (quote _⟶⟨_⟩_)
+                                           (vra m₁ ∷ vra m₂ ∷ vra m₃ ∷ []))
+                                 ∷ [])) >>= λ _ →
+     catchTC
+     (unify m₃ (def (quote _∎) (vra m₄ ∷ [])) >>= λ _ →
+      counter-reduce n m₂)
+     (unify m₃ (def (quote _⟶⟨_⟩_) (vra m₄
+                                     ∷ vra m₅
+                                     ∷ vra m₆
+                                     ∷ [])) >>= λ _ →
+      counter-reduce n m₂ >>= λ _ →
+      counter-reduce n m₃)
      ; (def (quote Reduce) (_ ∷ _ ∷ arg _ a ∷ _ ∷ []))
      → reduce a >>=
      λ { (con (quote App) (_ ∷ _ ∷ _ ∷ arg _ x ∷ arg _ y ∷ []))
