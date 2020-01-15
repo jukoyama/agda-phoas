@@ -1,13 +1,13 @@
 -- λ計算の証明を自動で出す
--- macroの部分が長いので、短く綺麗にする
 
-module lambda-macro2 where
+module lambda-macro where
 
 open import Data.Nat
 open import Function
 open import Data.Unit using (⊤; tt)
 open import Reflection using (newMeta)
 open import Agda.Builtin.List using (List; _∷_; [])
+open import Agda.Builtin.Bool using (true; false)
 open import Relation.Binary.PropositionalEquality using (_≡_; refl)
 open import Agda.Builtin.Reflection renaming (bindTC to _>>=_)
 
@@ -52,7 +52,6 @@ Value τ = (var : typ → Set) → value[ var ] τ
 
 -- Term : typ → Set₁
 -- Term  τ = (var : typ → Set) → term[ var ] τ
-
 
 -- M [ v / x]
 -- substitution relation
@@ -151,7 +150,8 @@ infixr 2 _⟶⟨_⟩_ _⟶*⟨_⟩_ _≡⟨_⟩_
 infix  1 begin_
 
 begin_ : {var : typ → Set} → {τ : typ} →
-         {e₁ e₂ : term[ var ] τ} → Reduce* e₁ e₂ → Reduce* e₁ e₂
+         {e₁ e₂ : term[ var ] τ} →
+         Reduce* e₁ e₂ → Reduce* e₁ e₂
 begin_ red = red
 
 _⟶⟨_⟩_ : {var : typ → Set} → {τ : typ} →
@@ -159,7 +159,7 @@ _⟶⟨_⟩_ : {var : typ → Set} → {τ : typ} →
            Reduce* e₁ e₃
 _⟶⟨_⟩_ e₁ {e₂} {e₃} e₁-red-e₂ e₂-red*-e₃ =
   R*Trans e₁ e₂ e₃ e₁-red-e₂ e₂-red*-e₃
-
+    
 _⟶*⟨_⟩_ : {var : typ → Set} → {τ : typ} →
             (e₁ {e₂ e₃} : term[ var ] τ) → Reduce* e₁ e₂ → Reduce* e₂ e₃ →
             Reduce* e₁ e₃
@@ -185,116 +185,78 @@ vra = arg (arg-info visible relevant)
 hra : {A : Set} → A → Arg A
 hra = arg (arg-info hidden relevant)
 
--- hole の数を受け取ったらその数だけの hole を List (Arg Term) の形で返す
-create-multi-meta : (n : ℕ) → TC (List (Arg Term))
-create-multi-meta zero    = returnTC []
-create-multi-meta (suc n) =
-  newMeta unknown >>= λ m →
-  create-multi-meta n >>= λ rest →
-  returnTC (vra m ∷ rest)
+macro
+  unify-refl : (hole : Term) → TC ⊤
+  unify-refl hole =
+    newMeta unknown >>= λ m →
+    let V = def (quote begin_) (vra m ∷ []) in
+    inferType V >>= λ I →
+    quoteTC V >>= λ Q →
+    checkType V I >>= λ C →
+    unify hole (def (quote begin_) (vra m ∷ []))
 
--- hole の数と コンストラクタの名前(?) を受け取ったら、hole を TC (List (Arg Term)) の形で返す
-create-meta-con : (n : ℕ) → (consName : Name) → (hole : Term) → TC (List (Arg Term))
-create-meta-con n consName hole =
-  create-multi-meta n >>= λ ms →
-  unify hole (con consName ms) >>= λ _ →
-  returnTC ms
-
--- hole の数と コンストラクタの名前(?) を受け取ったら、hole を TC (List (Arg Term)) の形で返す
-create-meta-def : (n : ℕ) → (consName : Name) → (hole : Term) → TC (List (Arg Term))
-create-meta-def n consName hole =
-  create-multi-meta n >>= λ ms →
-  unify hole (def consName ms) >>= λ _ →
-  returnTC ms
-
--- TC (List (Arg Term)) を hole に入れられるような形に使うためのもの
-list-to-TC : (goal : List (Arg Term)) → TC ⊤
-list-to-TC []                         = returnTC tt
-list-to-TC (arg _ currentgoal ∷ rest) = list-to-TC rest
-
-unify-arrow : (goal-list : List (Arg Term)) → TC (List (Arg Term))
-unify-arrow []                    = returnTC []
-unify-arrow (arg _ x ∷ goal-list) =
-  create-meta-def 3 (quote _⟶⟨_⟩_) x
-
-unify-qed : (hole : Term) → TC ⊤
-unify-qed hole =
-  create-meta-def 1 (quote _∎) hole >>= λ ms →
-  list-to-TC ms
-
-unify-begin⟶ : (hole : Term) → TC (List (Arg Term))
-unify-begin⟶ hole =
-  create-meta-def 1 (quote begin_) hole >>= λ l₁ →
-  unify-arrow l₁
-
-unify-App₁ : (hole : Term) → TC Term
-unify-App₁ hole =
-  create-meta-con 2 (quote RFrame) hole >>=
-  λ { (arg _ x ∷ arg _ y ∷ []) →
-       create-meta-con 1 (quote App₁) x >>= λ _ →
-       reduce y
-     ; e → typeError (strErr "not correct list" ∷ [])
-     }
-
-unify-App₂ : (hole : Term) → TC Term
-unify-App₂ hole =
-  create-meta-con 2 (quote RFrame) hole >>=
-  λ { (arg _ x ∷ arg _ y ∷ []) →
-      create-meta-con 1 (quote App₂) x >>= λ _ →
-      reduce y
-     ; e → typeError (strErr "not correct list" ∷ []) 
-     }
-
-unify-RBeta : (hole : Term) → TC Term
-unify-RBeta hole =
-  create-meta-con 1 (quote RBeta) hole >>=
-  λ { (arg _ x ∷ []) → reduce x
-     ; e → typeError (strErr "not correct list" ∷ [])
-     }
-
-unify-sVal : (hole : Term) → TC Term
-unify-sVal hole =
-  create-meta-con 1 (quote sVal) hole >>=
-  λ { (arg _ x ∷ []) → reduce x 
-      ; e → typeError (strErr "not correct list" ∷ [])
-      }
-
-unify-sApp : (hole : Term) → TC Term
-unify-sApp hole =
-  create-meta-con 2 (quote sApp) hole >>= {!!}
-  -- >>=
-  -- λ { (arg _ x ∷ arg _ y ∷ []) → {!!}
-  --    ; e → typeError (strErr "not correct list" ∷ [])
-  --    }
-
--- counter-reduce を使う部分は外に出せない...
--- 他に良い書き方があるかもしれない
 counter-reduce : (n : ℕ) → (hole : Term) → TC ⊤
--- counter-reduce zero hole    = typeError (strErr "time out" ∷ [])
-counter-reduce zero hole    = returnTC tt
+counter-reduce zero hole    = typeError (strErr "time out" ∷ [])
 counter-reduce (suc n) hole = inferType hole >>=
-  λ {(def (quote Reduce*) args) →
-      unify-begin⟶ hole >>=
-      -- _⟶⟨_⟩_ によってできる3つのホール
-      λ {(arg _ m₁ ∷ arg _ m₂ ∷ arg _ m₃ ∷ []) →
-          catchTC
-          (unify-qed m₃ >>= λ _ → counter-reduce n m₂)
-          (unify-arrow (vra m₃ ∷ []) >>= λ ms → list-to-TC ms >>= λ _ →
-           counter-reduce n m₂ >>= λ _ → counter-reduce n m₃)
-         ; e → typeError (strErr "uncorrect list" ∷ [])
-         }
+  λ {(def (quote Reduce*) (_ ∷ _ ∷ arg _ x ∷ arg _ y ∷ [])) →
+      newMeta unknown >>= λ m₁ →
+      newMeta unknown >>= λ m₂ →
+      newMeta unknown >>= λ m₃ →
+      newMeta unknown >>= λ m₄ →
+      newMeta unknown >>= λ m₅ →
+      newMeta unknown >>= λ m₆ →
+
+      -- let V = def (quote begin_) (vra m₁ ∷ []) in
+      -- reduce V >>= λ v →
+      -- unify hole v
+
+      -- inferType (def (quote begin_) (vra m₁ ∷ [])) >>= λ h₁ →
+      -- unify hole (def (quote begin_) (vra m₁ ∷ [])) >>= λ r →
+      -- unify m₁   (def (quote _⟶⟨_⟩_)
+      --            (vra m₂ ∷ vra m₃ ∷ vra m₄ ∷ [])) >>= λ r →
+      -- quoteTC r >>= λ q →
+      -- reduce q >>= λ r₁ →
+      -- noConstraints (unquoteTC h₁)
+            
+      unify hole (def (quote begin_) (vra (def (quote _⟶⟨_⟩_)
+                                           (vra m₁ ∷ vra m₂ ∷ vra m₃ ∷ []))
+                                 ∷ [])) >>= λ _ →
+      
+     catchTC
+     (unify m₃ (def (quote _∎) (vra m₄ ∷ [])) >>= λ _ →
+      counter-reduce n m₂)
+     (unify m₃ (def (quote _⟶⟨_⟩_) (vra m₄
+                                     ∷ vra m₅
+                                     ∷ vra m₆
+                                     ∷ [])) >>= λ _ →
+      counter-reduce n m₂ >>= λ _ →
+      counter-reduce n m₃)
      ; (def (quote Reduce) (_ ∷ _ ∷ arg _ a ∷ _ ∷ []))
      → reduce a >>=
      λ { (con (quote App) (_ ∷ _ ∷ _ ∷ arg _ x ∷ arg _ y ∷ []))
          → reduce x >>=
          λ { (con (quote App) args) →
-             unify-App₁ hole >>= λ m₂ → counter-reduce n m₂
+             newMeta unknown >>= λ m₁ →
+             newMeta unknown >>= λ m₂ →
+             unify hole  (con (quote RFrame)
+                              (vra (con (quote App₁) (vra m₁ ∷ []))
+                              ∷ vra m₂
+                              ∷ [])) >>= λ _ →
+              counter-reduce n m₂
             ; (con (quote Val) _)
               → reduce y >>=
               λ { (con (quote App) _) →
-                  unify-App₂ hole >>= λ m₂ → counter-reduce n m₂
+                  newMeta unknown >>= λ m₁ →
+                  newMeta unknown >>= λ m₂ →
+                  unify hole (con (quote RFrame)
+                                  (vra (con (quote App₂) (vra m₁ ∷ []))
+                                  ∷ vra m₂
+                                  ∷ [])) >>= λ _ →
+                  counter-reduce n m₂
                  ; (con (quote Val) _) →
-                   unify-RBeta hole >>= λ m → counter-reduce n m
+                 newMeta unknown >>= λ m →
+                 unify hole (con (quote RBeta) (vra m ∷ [])) >>= λ _ → 
+                 counter-reduce n m
                  ; t → typeError (strErr "not a Value" ∷ [])
                  }
             ; t → typeError (strErr "neither App nor Val" ∷ [])
@@ -303,16 +265,17 @@ counter-reduce (suc n) hole = inferType hole >>=
         }
      ; (def (quote Subst) (_ ∷ _ ∷ _ ∷ arg _ a ∷ _ ∷ _ ∷ []))
      → reduce a >>=
-     λ { (lam _ (abs _ (con (quote Val) _))) →
-         unify-sVal hole >>= λ m → counter-reduce n m
+     λ { (lam _ (abs _ (con (quote Val) _)))
+         → newMeta unknown >>= λ m →
+          unify hole ((con (quote sVal) (vra m ∷ []))) >>= λ _ →
+          counter-reduce n m
         ; (lam _ (abs _ (con (quote App) _)))
           → newMeta unknown >>= λ m₁
           → newMeta unknown >>= λ m₂ →
           unify hole ((con (quote sApp) (vra m₁ ∷ vra m₂ ∷ []))) >>= λ _ →
           counter-reduce n m₁ >>= λ _ →
           counter-reduce n m₂
-        -- ; t →  typeError (strErr "not lambda" ∷ [])
-        ; t → returnTC tt
+        ; t →  typeError (strErr "not lambda" ∷ [])
         }
      ; (def (quote SubstVal) (_ ∷ _ ∷ _ ∷ arg _ a ∷ _ ∷ _ ∷ []))
      → reduce a >>=
@@ -384,29 +347,21 @@ termffx = Val (Abst (λ f → Val (Abst (λ x → App (Val (Var f)) (Val (Var x)
 -- @ (λx.x) 1 ⟶ 1
 test1 : {var : typ → Set} →
   Reduce* {var} (App termx term1) term1
-test1 =
-  begin
-    App (Val (Abst (λ x → Val (Var x)))) (Val (Num 1))
-    ⟶⟨ RBeta (sVal sVar=) ⟩
-    Val (Num 1)
-  ∎
-
--- auto
-test1′ : {var : typ → Set} →
-  Reduce* {var} (App termx term1) term1
-test1′ = R*Trans
-         (App (Val (Abst (λ x → Val (Var x))))
-              (Val (Num 1)))
-         (Val (Num 1))
-         (Val (Num 1))
-         (RBeta (sVal sVar=))
-         (R*Id (Val (Num 1)))
+test1 = R*Trans (App (Val (Abst (λ x → Val (Var x)))) (Val (Num 1)))
+          (Val (Num 1)) (Val (Num 1)) (RBeta (sVal sVar=))
+          (R*Id (Val (Num 1)))
+  -- begin
+  --   App (Val (Abst (λ x → Val (Var x)))) (Val (Num 1))
+  --   ⟶⟨ RBeta (sVal sVar=) ⟩
+  --   Val (Num 1)
+  -- ∎
 
 {----------------Proof2----------------}
 
 -- @ (@ (λx.x) (λy.y)) 3 ⟶ 3
 test2 : {var : typ → Set} →
   Reduce* {var} (App (App (Val (Abst (λ z → Val (Var z)))) termy) term3) term3
+-- test2 = {!runTC!}
 test2 =
   begin
     App
@@ -418,25 +373,6 @@ test2 =
   ⟶⟨ RBeta (sVal sVar=) ⟩
     Val (Num 3)
   ∎
-
--- auto
-test2′ : {var : typ → Set} →
-  Reduce* {var} (App (App (Val (Abst (λ z → Val (Var z)))) termy) term3) term3
-test2′ = R*Trans
-            (App (App (Val (Abst (λ z → Val (Var z))))
-                      (Val (Abst (λ y → Val (Var y)))))
-                 (Val (Num 3)))
-            (App (Val (Abst (λ y → Val (Var y))))
-                 (Val (Num 3)))
-            (Val (Num 3))
-            (RFrame (App₁ (Val (Num 3))) (RBeta (sVal sVar=)))
-            (R*Trans (App (Val (Abst (λ y → Val (Var y))))
-                          (Val (Num 3)))
-                     (Val (Num 3))
-                     (Val (Num 3))
-                     (RBeta (sVal sVar=))
-                     (R*Id (Val (Num 3))))
-
 
 {----------------Proof3----------------}
 
@@ -454,25 +390,6 @@ test3 =
     Val (Num 3)
   ∎
 
--- auto
-test3′ : {var : typ → Set} →
-  Reduce* {var} (App termx (App termy term3)) term3
-test3′ = R*Trans
-            (App (Val (Abst (λ x → Val (Var x))))
-                 (App (Val (Abst (λ y → Val (Var y))))
-                      (Val (Num 3))))
-            (App (Val (Abst (λ x → Val (Var x))))
-                 (Val (Num 3)))
-            (Val (Num 3))
-            (RFrame (App₂ (Abst (λ x → Val (Var x)))) (RBeta (sVal sVar=)))
-            (R*Trans (App (Val (Abst (λ x → Val (Var x))))
-                          (Val (Num 3)))
-                     (Val (Num 3))
-                     (Val (Num 3))
-                     (RBeta (sVal sVar=))
-                     (R*Id (Val (Num 3))))
-
-
 {----------------Proof4----------------}
 
 -- (@ (@ (λfx.x) 3) 3) ⟶ 3
@@ -487,26 +404,6 @@ test4 =
   ⟶⟨ RBeta (sVal sVar=) ⟩
     Val (Num 3)
   ∎
-
--- auto
-test4′ : {var : typ → Set} →
-  Reduce* {var} (App (App termfx term3) term3) term3
-test4′ = R*Trans
-            (App (App (Val (Abst (λ f → Val (Abst
-                                 (λ x → Val (Var x))))))
-                      (Val (Num 3)))
-                 (Val (Num 3)))
-            (App (Val (Abst (λ z → Val (Var z))))
-                 (Val (Num 3)))
-            (Val (Num 3))
-            (RFrame (App₁ (Val (Num 3)))
-                    (RBeta (sVal (sFun (λ x → sVal sVar≠)))))
-            (R*Trans (App (Val (Abst (λ z → Val (Var z))))
-                          (Val (Num 3)))
-                     (Val (Num 3))
-                     (Val (Num 3))
-                     (RBeta (sVal sVar=))
-                     (R*Id (Val (Num 3))))
 
 {----------------Proof5----------------}
 
@@ -526,42 +423,6 @@ test5 =
   ⟶⟨ RBeta (sVal sVar=) ⟩
     term3
   ∎
-
--- auto
-test5′ : {var : typ → Set} →
-  Reduce* {var} (App (App (App termx′′ termfx) term3) term3) term3
-test5′ = R*Trans
-            (App (App (App (Val (Abst (λ x → Val (Var x))))
-                           (Val (Abst (λ f → Val (Abst
-                                      (λ x → Val (Var x)))))))
-                      (Val (Num 3)))
-                 (Val (Num 3)))
-            (App (App (Val (Abst (λ f → Val (Abst
-                                 (λ x → Val (Var x))))))
-                      (Val (Num 3)))
-                 (Val (Num 3)))
-            (Val (Num 3))
-            (RFrame (App₁ (Val (Num 3)))
-                    (RFrame (App₁ (Val (Num 3)))
-                            (RBeta (sVal sVar=))))
-            (R*Trans
-              (App (App (Val (Abst (λ f → Val (Abst
-                                   (λ x → Val (Var x))))))
-                        (Val (Num 3)))
-                   (Val (Num 3)))
-              (App (Val (Abst (λ z → Val (Var z))))
-                   (Val (Num 3)))
-              (Val (Num 3))
-              (RFrame (App₁ (Val (Num 3)))
-                      (RBeta (sVal (sFun (λ x → sVal sVar≠)))))
-              (R*Trans
-                (App (Val (Abst (λ z → Val (Var z))))
-                     (Val (Num 3)))
-                (Val (Num 3))
-                (Val (Num 3))
-                (RBeta (sVal sVar=))
-                (R*Id (Val (Num 3)))))
-
 
 {----------------Proof6----------------}
 
@@ -625,78 +486,10 @@ test7 : {var : typ → Set} →
 test7 =
   begin
     App (App add one) one
-  ⟶⟨ RFrame (App₁ one) (RBeta (sVal (sFun λ n → sVal
+  ⟶⟨ RFrame (App₁ one) (RBeta (sVal (sFun (λ n → sVal
                                       (sFun λ f → sVal
-                                      (sFun (λ x → sApp (sApp (sVal sVar=) (sVal sVar≠))
-                                                         (sApp (sApp (sVal sVar≠) (sVal sVar≠))
-                                                         (sVal sVar≠)))))))) ⟩
-    frame-plug (App₁ one) ((Val (Abst (λ n → Val (Abst
-                                      (λ f → Val (Abst
-                                      (λ x → App (App one (Val (Var f)))
-                                                 (App (App (Val (Var n)) (Val (Var f)))
-                                                      (Val (Var x)))))))))))
-  ⟶⟨ RBeta (sVal (sFun (λ x → sVal (sFun (λ f → sApp (sApp (sVal (sFun (λ x₁ → sVal (sFun
-                                                                          (λ x₂ → sApp (sVal sVar≠)
-                                                              (sVal sVar≠))))))
-                                                        (sVal sVar≠))
-                                                   (sApp (sApp (sVal sVar=) (sVal sVar≠))
-                                                         (sVal sVar≠))))))) ⟩
-    Val (Abst (λ f → Val (Abst (λ x → App (App one (Val (Var f)))
-                                           (App (App one (Val (Var f)))
-                                                (Val (Var x)))))))
-  ≡⟨ {!!} ⟩
-    two
+                                      (sFun (λ x → {!!}))))))) ⟩
+    {!!}
+  ⟶⟨ {!!} ⟩
+    {!!}
   ∎
-
--- auto
-test7′ : {var : typ → Set} →
-  Reduce* {var}  (App (App add one) one) two
-test7′ = R*Trans
-            (App (App (Val (Abst (λ m → Val (Abst
-                                 (λ n → Val (Abst
-                                 (λ f → Val (Abst
-                                 (λ x → App (App (Val (Var m))
-                                                  (Val (Var f)))
-                                             (App (App (Val (Var n))
-                                                       (Val (Var f)))
-                                                  (Val (Var x))))))))))))
-                      (Val (Abst (λ f → Val (Abst
-                                 (λ x → App (Val (Var f))
-                                             (Val (Var x))))))))
-                 (Val  (Abst (λ f → Val (Abst
-                             (λ x → App (Val (Var f)) (Val (Var x))))))))
-            (App (Val (Abst (λ z → Val (Abst
-                            (λ z₁ → Val (Abst
-                            (λ z₂ → App {!!} {!!})))))))
-                 (Val (Abst (λ f → Val (Abst
-                            (λ x → App (Val (Var f))
-                                        (Val (Var x))))))))
-            (Val (Abst (λ f → Val (Abst
-                       (λ x → App (Val (Var f))
-                                   (App (Val (Var f))
-                                        (Val (Var x))))))))
-            (RFrame (App₁ (Val (Abst (λ f → Val (Abst (λ x → App (Val (Var f)) (Val (Var x))))))))
-                    (RBeta (sVal (sFun (λ x → sVal (sFun
-                                       (λ x₁ → sVal (sFun
-                                       (λ x₂ → sApp {!!} {!!})))))))))
-            (R*Trans
-              (App (Val (Abst (λ z → Val (Abst
-                              (λ z₁ → Val (Abst
-                              (λ z₂ → App _ _)))))))
-                   (Val (Abst (λ f → Val (Abst
-                              (λ x → App (Val (Var f))
-                                          (Val (Var x))))))))
-              (Val (Abst (λ f → Val (Abst
-                         (λ x → App (Val (Var f))
-                                     (App (Val (Var f))
-                                          (Val (Var x))))))))
-              (Val (Abst (λ f → Val (Abst
-                         (λ x → App (Val (Var f))
-                                     (App (Val (Var f))
-                                          (Val (Var x))))))))
-              (RBeta (sVal (sFun (λ x → sVal (sFun
-                                 (λ x₁ → sApp {!!} {!!}))))))
-              (R*Id (Val (Abst (λ f → Val (Abst
-                               (λ x → App (Val (Var f))
-                                           (App (Val (Var f))
-                                                (Val (Var x))))))))))
