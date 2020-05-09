@@ -292,7 +292,7 @@ mutual
                       (λ n → CPSApp (CPSApp (CPSVal m) (CPSVal n))
                                      (CPSVal (CPSFun (λ a → κ (CPSVar a))))))
                                      -- λκ.(@κ (@ [M] (λm.m)))
-  cpsI τ₁ τ₂ .τ₂ (Reset τ₃ .τ₁ .τ₂ e₁) κ = CPSLet (cpsI τ₃ τ₃ τ₁ e₁ CPSVal) (λ v → κ (CPSVar v))
+  cpsI τ₁ τ₂ .τ₂ (Reset τ₃ .τ₁ .τ₂ e₁) κ = CPSLet (cpsI τ₃ τ₃ τ₁ e₁ (λ m → CPSVal m)) (λ v → κ (CPSVar v))
   cpsI τ₁ τ₂ τ₃ (Shift τ τ₄ .τ₃ .τ₁ .τ₂ e) κ =
     CPSLet (CPSVal (CPSFun (λ a → CPSVal (CPSFun (λ κ′ → CPSApp (CPSVal (CPSVar κ′)) (κ (CPSVar a)))))))
     (λ x → cpsI τ₄ τ₄ τ₃ (e x) (λ m → CPSVal m))
@@ -306,9 +306,13 @@ mutual
     cpsI (τ₄ ⇒ τ₁ cps[ τ₂ , τ₅ ]) τ₆ τ₃
          e₁ (λ m → cpsI τ₄ τ₅ τ₆ e₂ (λ n → CPSApp (CPSApp (CPSVal m) (CPSVal n)) (CPSVal k)))
   cpsI′ τ₁ τ₂ .τ₂ (Reset τ₃ .τ₁ .τ₂ e₁) k =
-    CPSApp (CPSVal k) (cpsI τ₃ τ₃ τ₁ e₁ CPSVal) 
-    -- CPSLet (cpsI τ₃ τ₃ τ₁ e₁ CPSVal) (λ a → CPSApp (CPSVal k) (CPSVal (CPSVar a)))
-  cpsI′ τ₁ τ₂ τ₃  (Shift τ τ₄ .τ₃ .τ₁ .τ₂ e) k = {!!}
+    -- CPSApp (CPSVal k) (cpsI τ₃ τ₃ τ₁ e₁ (λ m → CPSVal m)) 
+    CPSLet (cpsI τ₃ τ₃ τ₁ e₁ (λ m → CPSVal m)) (λ a → CPSApp (CPSVal k) (CPSVal (CPSVar a)))
+  cpsI′ τ₁ τ₂ τ₃  (Shift τ τ₄ .τ₃ .τ₁ .τ₂ e) k =
+    CPSLet (CPSVal (CPSFun (λ a → CPSVal (CPSFun
+                           (λ κ′ → CPSApp (CPSVal (CPSVar κ′))
+                           (CPSApp (CPSVal k) (CPSVal(CPSVar a))))))))
+           (λ x → cpsI τ₄ τ₄ τ₃ (e x) (λ m → CPSVal m))
     -- CPSLet (CPSVal (CPSFun (λ a → CPSVal (CPSFun (λ κ′ → CPSApp (CPSVal (CPSVar κ′)) (k (CPSVar a)))))))
     -- (λ x → cpsI τ₄ τ₄ τ₃ (e x) (λ m → CPSVal m))
 
@@ -513,6 +517,15 @@ _≡⟨_⟩_ : {var : cpstyp → Set} {τ₁ : cpstyp} →
            cpsequal e₁ e₃
 _≡⟨_⟩_ e₁ {e₂} {e₃} refl e₂-eq-e₃ = e₂-eq-e₃
 
+-- _≡₂⟨_⟩_ : {var : cpstyp → Set} {τ₁ τ₂ : cpstyp} →
+--           -- (e₁ : var τ₁ → cpsterm[ var ] τ₂) →
+--           (e₁ {e₂} : cpsterm[ var ] τ₂) → 
+--           {v : cpsvalue[ var ] τ₁} →
+--           {e₃ : cpsterm[ var ] τ₂} →
+--           e₁ ≡ e₂ → cpsSubst (λ x′ → e₂) v e₃ → cpsSubst (λ x′ → e₃) v e₃
+--           -- cpsSubst (λ x → e₁) v e₂ → cpsSubst (λ x → e₂) v e₃ → cpsSubst (λ x → e₁) v e₃
+-- _≡₂⟨_⟩_ e₁ {e₂} {e₃} refl e₂-subst-e₃ = e₂-subst-e₃
+
 _∎ : {var : cpstyp → Set} {τ₁ : cpstyp} →
      (e : cpsterm[ var ] τ₁) → cpsequal e e
 _∎ e = eqId
@@ -535,7 +548,7 @@ mutual
             {v : cpsvalue[ var ] τ₂} →
             cpsSubstVal (λ y → t) v t
   SubstV≠ {t = CPSVar x} = sVar≠
-  SubstV≠ {t = CPSNum n} = sNum
+  SubstV≠ {t = CPSNum n}  = sNum
   SubstV≠ {t = CPSFun e₁} = sFun (λ x → Subst≠)
 
   Subst≠ : {var : cpstyp → Set} {τ₁ τ₂ : cpstyp} →
@@ -557,44 +570,62 @@ mutual
   eSubstV SubstVal.sVar= = cpsSubstVal.sVar=
   eSubstV SubstVal.sVar≠ = cpsSubstVal.sVar≠
   eSubstV SubstVal.sNum  = cpsSubstVal.sNum
-  eSubstV {var} {τ₁} {τ = τ₂} {v₁} {v₁′} {v} (sFun sub) = {!!}
-    -- sFun (λ x → sVal (sFun (λ k → ekSubst′ {!!} (sub x))))
+  eSubstV {var} {τ₁} {τ = τ₂} {v₁} {v₁′} {v} (sFun sub) = 
+    sFun (λ x → sVal (sFun (λ k → ekSubst′ k (sub x))))
 
+  eκSubst : {var : cpstyp → Set} {τ₁ τ₂ τ₃ τ : typ} →
+             {e₁ : var (cpsT τ) →
+                   term[ var ∘ cpsT ] τ₁ cps[ τ₂ , τ₃ ]} →
+             {e₂ : term[ var ∘ cpsT ] τ₁ cps[ τ₂ , τ₃ ]} →
+             {v₂ : value[ var ∘ cpsT ] τ cps[τ,τ]} →
+             {κ₁ : var (cpsT τ) → cpsvalue[ var ] (cpsT τ₁) → cpsterm[ var ] (cpsT τ₂)} →
+             {κ₂ : cpsvalue[ var ] (cpsT τ₁) → cpsterm[ var ] (cpsT τ₂)} →
+             Subst e₁ v₂ e₂ →
+             subst-cont κ₁ (cpsV τ v₂) κ₂ →
+             cpsSubst (λ x → cpsI τ₁ τ₂ τ₃ {var = var} (e₁ x) (κ₁ x))
+                      (cpsV τ v₂)
+                      (cpsI τ₁ τ₂ τ₃ e₂ κ₂)
+  eκSubst (sVal subv)      eq = eq (eSubstV subv)
+  eκSubst (sApp sub₁ sub₂) eq =
+    eκSubst sub₁ λ m → eκSubst sub₂
+                  λ n → sApp (sApp (sVal m) (sVal n)) (sVal (sFun λ a → eq sVar≠))
+  eκSubst (sReset sub)    eq = sLet (λ c → eq sVar≠) (λ c → eκSubst sub (λ m → sVal m))                   
+  eκSubst (sShift sub)    eq = sLet (λ c → eκSubst (sub c) (λ m → sVal m))
+                                     (λ c → sVal (sFun (λ a →
+                                             sVal (sFun (λ κ' → sApp (sVal sVar≠) (eq sVar≠))))))
+
+
+
+-- Goal: cpsSubst (λ y → cpsI′ τ₁ τ₂ τ₃ (e₁ y) (CPSVar k)) (cpsV τ v₂)
+--       (_e₁′_1459 k)
+-- ————————————————————————————————————————————————————————————
+-- k    : var (cpsT τ₁ ⇒ cpsT τ₂)
+-- e₂   : term[ (λ {x} → var) ∘ cpsT ] τ₁ cps[ τ₂ , τ₃ ]
+-- v₂   : value[ (λ {x} → var) ∘ cpsT ] τ cps[τ,τ]
+-- e₁   : ((λ {x} → var) ∘ cpsT) τ →
+--        term[ (λ {x} → var) ∘ cpsT ] τ₁ cps[ τ₂ , τ₃ ]
+     
   -- ([e₁]′ @ k)[v/y] = [e₂]′ @ k
   ekSubst′ : {var : cpstyp → Set} {τ₁ τ₂ τ₃ τ : typ} →
              {e₁ : var (cpsT τ) →
                    term[ var ∘ cpsT ] τ₁ cps[ τ₂ , τ₃ ]} →
-             (e₂ : term[ var ∘ cpsT ] τ₁ cps[ τ₂ , τ₃ ]) →
-             {v  : value[ var ∘ cpsT ] τ cps[τ,τ]} →
-             (k  : cpsvalue[ var ] (cpsT τ₁ ⇒ cpsT τ₂)) →
-             -- (k  : var (cpsT τ₁ ⇒ cpsT τ₂)) →
-             Subst e₁ v e₂ →
-             -- cpsSubst (λ x′ → cpsI′ τ₁ τ₂ τ₃ {var = var} (e₁ x′) (CPSVar k))
-             --          (cpsV τ v)
-             --          (cpsI′ τ₁ τ₂ τ₃ e₂ (CPSVar k))
-             cpsSubst (λ x′ → cpsI′ τ₁ τ₂ τ₃ {var = var} (e₁ x′) k)
-                      (cpsV τ v)
-                      (cpsI′ τ₁ τ₂ τ₃ e₂ k)
-  ekSubst′ (Val x) k (sVal sVar=) = sApp (sVal SubstV≠) (sVal cpsSubstVal.sVar=)
-  ekSubst′ (Val y) k (sVal sVar≠) = {!!}
-  ekSubst′ (Val .(Num _)) k (sVal sNum) = {!!}
-  ekSubst′ (Val .(Fun _ _ _)) k (sVal (sFun x)) = {!!}
-  ekSubst′ (App e₂ e₃) k x = {!!}
-  ekSubst′ (Reset τ₁ τ₂ τ₃ e₂) k x = {!!}
-  ekSubst′ (Shift τ τ₁ τ₂ τ₃ τ₄ x₁) k x = {!!}
-  -- ekSubst′ {e₁ = .(λ x → Val (_ x))}             k (sVal sub)      =
-  --   sApp (sVal cpsSubstVal.sVar≠) (sVal (eSubstV sub))
-  -- ekSubst′ {e₁ = .(λ y → App (_ y) (_ y))}       k (sApp sub sub₁) =
-  --   {!!}
-  -- ekSubst′ {e₁ = .(λ y → Shift _ _ _ _ _ (_ y))} k (sShift x) = {!!}
-  -- ekSubst′ {e₁ = .(λ y → Reset _ _ _ (_ y))}     k (sReset x) = {!!}
-
--- k[v/k] = v ⟶ [e]′@(k[v/k]) = [e′]′@(k[v/k]) = [e′]′@v
-kSubst′ : {var : cpstyp → Set} {τ₁ τ₂ τ₃ : typ} {τ : cpstyp} →
-          (e : term[ var ∘ cpsT ] τ₁ cps[ τ₂ , τ₃ ]) →
-          {v : cpsvalue[ var ] (cpsT τ₁ ⇒ cpsT τ₂)} →
-          cpsSubst (λ k → cpsI′ τ₁ τ₂ τ₃ e (CPSVar k)) v (cpsI′ τ₁ τ₂ τ₃ e v)
-kSubst′ = {!!}
+             {e₂ : term[ var ∘ cpsT ] τ₁ cps[ τ₂ , τ₃ ]} →
+             {v₂ : value[ var ∘ cpsT ] τ cps[τ,τ]} →
+             (k : var (cpsT τ₁ ⇒ cpsT τ₂)) → 
+             Subst e₁ v₂ e₂ →
+             cpsSubst (λ x → cpsI′ τ₁ τ₂ τ₃ {var = var} (e₁ x) (CPSVar k))
+                      (cpsV τ v₂)
+                      (cpsI′ τ₁ τ₂ τ₃ e₂ (CPSVar k))
+  ekSubst′ k (sVal sub)        = sApp (sVal sVar≠) (sVal (eSubstV sub))
+  ekSubst′ k (sApp sub₁ sub₂) = eκSubst sub₁
+                                        (λ m → eκSubst sub₂
+                                        (λ n → sApp (sApp (sVal m) (sVal n)) (sVal sVar≠)))
+  ekSubst′ k (sReset sub) = sLet (λ c → sApp (sVal sVar≠) (sVal sVar≠))
+                                 (λ c → eκSubst sub (λ m → sVal m))                                        
+  ekSubst′ k (sShift sub) = sLet (λ c → eκSubst (sub c) (λ m → sVal m))
+                                 (λ c → sVal (sFun (λ a →
+                                         sVal (sFun (λ κ' → sApp (sVal sVar≠)
+                                                                  (sApp (sVal sVar≠) (sVal sVar≠)))))))
 
 
 {----------------SCHEMATIC----------------}
@@ -602,16 +633,134 @@ kSubst′ = {!!}
 schematic : {var : cpstyp → Set} {τ₁ τ₂ : typ} →
             (κ : cpsvalue[ var ] (cpsT τ₁) →
                   cpsterm[ var ] (cpsT τ₂)) → Set
-schematic {var} {τ₁} {τ₂} κ =
+schematic {var} {τ₁} κ =
+  (v : cpsvalue[ var ] (cpsT τ₁)) →
+  cpsSubst (λ y → κ (CPSVar y)) v (κ v)
+
+schematic′ : {var : cpstyp → Set} {τ₁ τ₂ : typ} {τ : cpstyp} →
+             (κ : cpsvalue[ var ] τ →
+                   cpsvalue[ var ] (cpsT τ₁) → cpsterm[ var ] (cpsT τ₂)) → Set
+schematic′ {var} {τ₁} {τ₂} {τ} κ =
+  {v : cpsvalue[ var ] τ} →
+  (x : cpsvalue[ var ] (cpsT τ₁)) →
+  cpsSubst (λ y → κ (CPSVar y) x) v (κ v x)
+
+schematicV : {var : cpstyp → Set} {τ₁ τ₂ : typ} →
+            (κ : cpsvalue[ var ] (cpsT τ₁) →
+                  cpsterm[ var ] (cpsT τ₂)) → Set
+schematicV {var} {τ₁} {τ₂} κ =
   (v : value[ var ∘ cpsT ] τ₁ cps[τ,τ]) →
   cpsSubst (λ y → κ (CPSVar y)) (cpsV τ₁ v) (κ (cpsV τ₁ v))
 
+
+-- C-c C-x C-h -> C-c C-c e
+κSubst : {var : cpstyp → Set} {τ₁ τ₂ τ₃ : typ} {τ : cpstyp} →
+         (e : term[ var ∘ cpsT ] τ₁ cps[ τ₂ , τ₃ ]) →
+         -- (e : term[ var ∘ cpsT ] τ₄ ⇒ τ₁ cps[ τ₂ , τ₃ ]) →         
+         {v : cpsvalue[ var ] τ} → 
+         -- {v : cpsvalue[ var ] (cpsT τ₁ ⇒ cpsT τ₂)} →
+         (κ : cpsvalue[ var ] τ →
+              cpsvalue[ var ] (cpsT τ₁) → cpsterm[ var ] (cpsT τ₂)) →
+         schematic′ κ →
+         cpsSubst (λ k → cpsI τ₁ τ₂ τ₃ e (κ (CPSVar k))) v (cpsI τ₁ τ₂ τ₃ e (κ v))
+κSubst {var} {τ₁} {τ₂} {.τ₂} {τ} (Val {τ₁ = .τ₁} {τ₂ = .τ₂} v) κ sch-κ = sch-κ (cpsV τ₁ v)
+κSubst {var} {τ₁} {τ₂} {τ₃} {τ} (App {τ₁ = .τ₁} {τ₂ = τ₄} {τ₃ = .τ₂} {τ₄ = τ₅} {τ₅ = τ₆} {τ₆ = .τ₃} e₁ e₂) {v} κ sch-κ =
+  κSubst e₁ (λ v' → (λ m →
+            cpsI τ₄ τ₅ τ₆ e₂
+            (λ n →
+               CPSApp (CPSApp (CPSVal m) (CPSVal n))
+               (CPSVal (CPSFun (λ a → κ v' (CPSVar a))))))) (λ v₁ → 
+  κSubst e₂ (λ v' → (λ n →
+            CPSApp (CPSApp (CPSVal v₁) (CPSVal n))
+            (CPSVal (CPSFun (λ a → κ v' (CPSVar a)))))) λ v₂ → sApp Subst≠ (sVal (sFun (λ k' → sch-κ (CPSVar k')))))
+            
+κSubst {var} {.τ₂} {.τ₃} {τ₃} {τ} (Reset τ₁ τ₂ τ₃ e) {v} κ sch-κ =
+  sLet (λ k' → sch-κ (CPSVar k')) (λ m → Subst≠)
+
+κSubst {var} {.τ₄} {.τ₅} {.τ₃} {τ} (Shift τ₁ τ₂ τ₃ τ₄ τ₅ e) {v} κ sch-κ =
+  sLet (λ k' → Subst≠)
+       λ v' → sVal (sFun (λ a → sVal (sFun (λ κ′ → sApp Subst≠ (sch-κ (CPSVar a))))))
+
+
+-- k[v/k] = v ⟶ [e]′@(k[v/k]) = [e′]′@(k[v/k]) = [e′]′@v
+kSubst′ : {var : cpstyp → Set} {τ₁ τ₂ τ₃ : typ} →
+          (e : term[ var ∘ cpsT ] τ₁ cps[ τ₂ , τ₃ ]) →
+          {v : cpsvalue[ var ] (cpsT τ₁ ⇒ cpsT τ₂)} →
+          cpsSubst (λ k → cpsI′ τ₁ τ₂ τ₃ e (CPSVar k)) v (cpsI′ τ₁ τ₂ τ₃ e v)
+
+kSubst′ (Val v) = sApp (sVal sVar=) (sVal SubstV≠)
+kSubst′ {var} {τ₁} {τ₂} {τ₃} (App {τ₁ = .τ₁} {τ₂ = τ₄} {τ₃ = .τ₂} {τ₄ = τ₅} {τ₅ = τ₆} {τ₆ = .τ₃} e₁ e₂) =
+  κSubst e₁ (λ v' → λ m →
+                     cpsI τ₄ τ₅ τ₆ e₂
+                     (λ n → CPSApp (CPSApp (CPSVal m) (CPSVal n)) (CPSVal v'))) λ v₁ → 
+  κSubst e₂ (λ v' → (λ n → CPSApp (CPSApp (CPSVal v₁) (CPSVal n)) (CPSVal v'))) λ v₂ → sApp Subst≠ (sVal sVar=)
+kSubst′ (Reset τ₁ τ₂ τ₃ e) =
+  sLet (λ k' → sApp (sVal sVar=) Subst≠) (λ m → Subst≠)
+kSubst′ (Shift τ₁ τ₂ τ₃ τ₄ τ₅ e) =
+  sLet (λ m  → Subst≠)
+       (λ k' → sVal (sFun (λ a → sVal (sFun (λ κ′ → sApp Subst≠ (sApp (sVal sVar=) Subst≠))))))
+
 -- @ [e]′ (λv.@'κ v) ⟶* @' [e] κ
 cpsEtaEta′ : {var : cpstyp → Set} → {τ₁ τ₂ τ₃ : typ} →
-             {e   : term[ var ∘ cpsT ] τ₁ cps[ τ₂ , τ₃ ]} →
+             (e   : term[ var ∘ cpsT ] τ₁ cps[ τ₂ , τ₃ ]) →
              (κ  : cpsvalue[ var ] (cpsT τ₁) → cpsterm[ var ] (cpsT τ₂)) →
+             schematicV κ → 
              cpsequal (cpsI′ τ₁ τ₂ τ₃ e (CPSFun (λ a → κ (CPSVar a)))) (cpsI τ₁ τ₂ τ₃ e κ)
-cpsEtaEta′ = {!!}
+             
+cpsEtaEta′ {τ₁ = τ₁} {τ₂} {.τ₂} (Val {τ₁ = .τ₁} {τ₂ = .τ₂} v) κ sche =
+  begin
+    cpsI′ τ₁ τ₂ τ₂ (Val v) (CPSFun (λ a → κ (CPSVar a)))
+  ≡⟨ refl ⟩
+    CPSApp (CPSVal (CPSFun (λ a → κ (CPSVar a))))
+           (CPSVal (cpsV τ₁ v))    
+  ⟶⟨ eqBeta (sche v) ⟩
+    κ (cpsV τ₁ v)
+  ⟶⟨ eqId ⟩
+    cpsI τ₁ τ₂ τ₂ (Val v) κ
+  ∎
+
+cpsEtaEta′ {τ₁ = τ₁} {τ₂} {τ₃} (App {τ₁ = .τ₁} {τ₂ = τ₄} {τ₃ = .τ₂} {τ₄ = τ₅} {τ₅ = τ₆} {τ₆ = .τ₃} e₁ e₂) κ sche =
+  begin
+    cpsI′ τ₁ τ₂ τ₃ (App e₁ e₂) (CPSFun (λ a → κ (CPSVar a)))
+  ≡⟨ refl ⟩
+    cpsI (τ₄ ⇒ τ₁ cps[ τ₂ , τ₅ ]) τ₆ τ₃ e₁
+    (λ m → cpsI τ₄ τ₅ τ₆ e₂
+           λ n → CPSApp (CPSApp (CPSVal m) (CPSVal n)) (CPSVal (CPSFun (λ a → κ (CPSVar a)))))
+  ⟶⟨ eqId ⟩
+    cpsI τ₁ τ₂ τ₃ (App e₁ e₂) κ
+  ∎
+  
+cpsEtaEta′ {τ₁ = .τ₂} {.τ₃} {.τ₃} (Reset τ₁ τ₂ τ₃ e) κ sche =
+  begin
+    cpsI′ τ₂ τ₃ τ₃ (Reset τ₁ τ₂ τ₃ e) (CPSFun (λ a → κ (CPSVar a)))
+  ≡⟨ refl ⟩
+    CPSLet (cpsI τ₁ τ₁ τ₂ e (λ m → CPSVal m))
+           (λ c → CPSApp (CPSVal (CPSFun λ a → κ (CPSVar a))) (CPSVal (CPSVar c)))
+  ⟶⟨ eqLet₂ (cpsI τ₁ τ₁ τ₂ e CPSVal) (λ k' → eqBeta (sche (Var k'))) ⟩
+    CPSLet (cpsI τ₁ τ₁ τ₂ e (λ m → CPSVal m))
+           (λ c → κ (CPSVar c))
+  ⟶⟨ eqId ⟩
+    cpsI τ₂ τ₃ τ₃ (Reset τ₁ τ₂ τ₃ e) κ
+  ∎
+
+cpsEtaEta′ {τ₁ = .τ₃} {.τ₄} {.τ₂} (Shift τ τ₁ τ₂ τ₃ τ₄ e) κ sche =
+  begin
+    cpsI′ τ₃ τ₄ τ₂ (Shift τ τ₁ τ₂ τ₃ τ₄ e) (CPSFun (λ a → κ (CPSVar a)))
+  ≡⟨ refl ⟩
+    CPSLet (CPSVal (CPSFun (λ a → CPSVal (CPSFun
+           (λ κ′ → CPSApp (CPSVal (CPSVar κ′))
+                           (CPSApp (CPSVal (CPSFun (λ a → κ (CPSVar a)))) -- ????
+                                   (CPSVal (CPSVar a))))))))
+      (λ c → cpsI τ₁ τ₁ τ₂ (e c) (λ m → CPSVal m))
+  ⟶⟨ eqLet₁ (λ c → cpsI τ₁ τ₁ τ₂ (e c) (λ m → CPSVal m))
+      (eqFun λ a → eqFun (λ κ′ → eqApp₂ (eqBeta (sche (Var a)))) ) ⟩
+    CPSLet (CPSVal (CPSFun (λ a → CPSVal (CPSFun
+           (λ κ′ → CPSApp (CPSVal (CPSVar κ′)) (κ (CPSVar a)))))))
+      (λ c → cpsI τ₁ τ₁ τ₂ (e c) (λ m → CPSVal m))
+  ⟶⟨ eqId ⟩
+    cpsI τ₃ τ₄ τ₂ (Shift τ τ₁ τ₂ τ₃ τ₄ e) κ
+  ∎
+
 
 {----------------Term Definition----------------}
 
@@ -619,8 +768,119 @@ correctII : {var : cpstyp → Set} → {τ₁ τ₂ τ₃ : typ} →
             {e  : term[ var ∘ cpsT ] τ₁ cps[ τ₂ , τ₃ ]} →
             {e′ : term[ var ∘ cpsT ] τ₁ cps[ τ₂ , τ₃ ]} →
             (κ : cpsvalue[ var ] (cpsT τ₁) → cpsterm[ var ] (cpsT τ₂)) →
-            schematic {var} {τ₁} {τ₂} κ →
+            schematicV {var} {τ₁} {τ₂} κ →
             Reduce e e′ →
             cpsequal (cpsI τ₁ τ₂ τ₃ e κ) (cpsI τ₁ τ₂ τ₃ e′ κ)
 
-correctII = {!!}
+correctII {τ₁ = τ₁} {τ₂} {τ₃} {e′ = e₂} κ sche (RBeta {τ} {e₁ = e₁} {v₂} {e₁′ = e₂} sub) =
+  begin
+    cpsI τ₁ τ₂ τ₃ (App (Val (Fun τ₁ τ e₁)) (Val v₂)) κ
+  ≡⟨ refl ⟩
+    CPSApp (CPSApp (CPSVal (CPSFun (λ x → CPSVal (CPSFun λ k → cpsI′ τ₁ τ₂ τ₃ (e₁ x) (CPSVar k)))))
+                   (CPSVal (cpsV τ v₂)))
+           (CPSVal (CPSFun (λ a → κ (CPSVar a))))
+  ⟶⟨ eqApp₁ (eqBeta (sVal (sFun (λ k → ekSubst′ k sub)))) ⟩ 
+    CPSApp (CPSVal (CPSFun (λ k → cpsI′ τ₁ τ₂ τ₃ e₂ (CPSVar k))))
+           (CPSVal (CPSFun (λ a → κ (CPSVar a))))
+  ⟶⟨ eqBeta (kSubst′ e₂) ⟩
+    cpsI′ τ₁ τ₂ τ₃ e₂ (CPSFun (λ a → κ (CPSVar a)))
+  ⟶⟨ cpsEtaEta′ e₂ κ sche ⟩
+    cpsI τ₁ τ₂ τ₃ e₂ κ
+  ∎
+
+correctII {τ₁ = τ₁} {τ₂} {τ₃} κ sche
+          (RFrame {τ₁ = .(τ₅ ⇒ τ₁ cps[ τ₂ , τ₆ ])} {τ₂ = τ₄} {τ₃ = .τ₃} {τ₄ = .τ₁} {τ₅ = .τ₂} {τ₆ = .τ₃}
+          {e₁ = e₁} {e₂ = e₁′}
+          (App₁ {τ₁ = .τ₁} {τ₂ = τ₅} {τ₃ = .τ₂} {τ₄ = τ₆} {τ₅ = .τ₄} {τ₆ = .τ₃} e₂) sub) =
+  begin
+    cpsI τ₁ τ₂ τ₃ (App e₁ e₂) κ
+  ≡⟨ refl ⟩
+    cpsI (τ₅ ⇒ τ₁ cps[ τ₂ , τ₆ ]) τ₄ τ₃ e₁
+    (λ m → cpsI τ₅ τ₆ τ₄ e₂
+           (λ n → CPSApp (CPSApp (CPSVal m) (CPSVal n)) (CPSVal (CPSFun (λ a → κ (CPSVar a))))))
+  ⟶⟨ correctII (λ m → cpsI τ₅ τ₆ τ₄ e₂
+                        (λ n → CPSApp (CPSApp (CPSVal m) (CPSVal n))
+                                      (CPSVal (CPSFun (λ a → κ (CPSVar a))))))
+                 (λ v → κSubst e₂ (λ m →
+                                   (λ n → CPSApp (CPSApp (CPSVal m) (CPSVal n))
+                                                  (CPSVal (CPSFun (λ a → κ (CPSVar a))))))
+                                   λ k₁ → sApp (sApp (sVal sVar=) (sVal SubstV≠))
+                                                (sVal (sFun (λ k₂ → Subst≠))))
+                 sub ⟩
+    cpsI (τ₅ ⇒ τ₁ cps[ τ₂ , τ₆ ]) τ₄ τ₃ e₁′
+         (λ m → cpsI τ₅ τ₆ τ₄ e₂
+         (λ n → CPSApp (CPSApp (CPSVal m) (CPSVal n))
+                        (CPSVal (CPSFun (λ a → κ (CPSVar a))))))
+  ⟶⟨ eqId ⟩
+    cpsI τ₁ τ₂ τ₃ (App e₁′ e₂) κ
+  ∎
+
+correctII {τ₁ = τ₁} {τ₂} {τ₃} κ sche
+          (RFrame {τ₁ = τ₄} {τ₂ = τ₅} {τ₃ = .τ₃} {τ₄ = .τ₁} {τ₅ = .τ₂} {τ₆ = .τ₃} {e₁ = e₂} {e₂ = e₂′}
+          (App₂ {τ₁ = .τ₁} {τ₂ = .τ₄} {τ₃ = .τ₂} {τ₄ = .τ₅} {τ₅ = .τ₃} v₁) sub) =
+  begin
+    cpsI τ₁ τ₂ τ₃ (App (Val v₁) e₂) κ
+  ≡⟨ refl ⟩
+    cpsI (τ₄ ⇒ τ₁ cps[ τ₂ , τ₅ ]) τ₃ τ₃ (Val v₁)
+    (λ m → cpsI τ₄ τ₅ τ₃ e₂
+           (λ n → CPSApp (CPSApp (CPSVal m) (CPSVal n)) (CPSVal (CPSFun (λ a → κ (CPSVar a))))))
+  ≡⟨ refl ⟩
+    cpsI τ₄ τ₅ τ₃ e₂
+    (λ n → CPSApp (CPSApp (CPSVal (cpsV (τ₄ ⇒ τ₁ cps[ τ₂ , τ₅ ]) v₁)) (CPSVal n))
+                           (CPSVal (CPSFun (λ a → κ (CPSVar a)))))
+  ⟶⟨ correctII (λ n → CPSApp (CPSApp (CPSVal (cpsV (τ₄ ⇒ τ₁ cps[ τ₂ , τ₅ ]) v₁)) (CPSVal n))
+                               (CPSVal (CPSFun (λ a → κ (CPSVar a)))))
+                (λ v → sApp (sApp (sVal SubstV≠) (sVal sVar=))
+                             (sVal (sFun (λ a → Subst≠))))
+                sub ⟩
+    cpsI τ₄ τ₅ τ₃ e₂′
+      (λ n′ → CPSApp (CPSApp (CPSVal (cpsV (τ₄ ⇒ τ₁ cps[ τ₂ , τ₅ ]) v₁)) (CPSVal n′))
+                     (CPSVal (CPSFun (λ a → κ (CPSVar a)))))
+  ⟶⟨ eqId ⟩
+    cpsI τ₁ τ₂ τ₃ (App (Val v₁) e₂′) κ
+  ∎
+
+correctII {τ₁ = τ₁} {τ₂} {.τ₂} κ sche
+          (RFrame {τ₁ = τ₃} {τ₂ = .τ₃} {τ₃ = .τ₁} {τ₄ = .τ₁} {τ₅ = .τ₂} {τ₆ = .τ₂} {e₁ = e} {e₂ = e′}
+          (Reset {τ₁ = .τ₃} {τ₂ = .τ₁} {τ₃ = .τ₂}) sub) =
+  begin
+    cpsI τ₁ τ₂ τ₂ (Reset τ₃ τ₁ τ₂ e) κ
+  ≡⟨ refl ⟩
+    CPSLet (cpsI τ₃ τ₃ τ₁ e (λ m → CPSVal m))
+           (λ c → κ (CPSVar c))
+  ⟶⟨ eqLet₁ (λ c → κ (CPSVar c))
+              (correctII (λ m → CPSVal m) (λ v → sVal sVar=) sub) ⟩
+    CPSLet (cpsI τ₃ τ₃ τ₁ e′ CPSVal) (λ c → κ (CPSVar c))
+  ⟶⟨ eqId ⟩
+    cpsI τ₁ τ₂ τ₂ (Reset τ₃ τ₁ τ₂ e′) κ
+  ∎
+
+correctII {τ₁ = τ₁} {τ₂} {.τ₂} κ sche
+          (RReset {τ₁ = .τ₁} {τ₂ = .τ₂} {v₁ = v}) =
+  begin
+    cpsI τ₁ τ₂ τ₂ (Reset τ₁ τ₁ τ₂ (Val v)) κ
+  ≡⟨ refl ⟩
+    CPSLet (cpsI τ₁ τ₁ τ₁ (Val v) (λ m → CPSVal m))
+           (λ c → κ (CPSVar c))
+  ≡⟨ refl ⟩
+    CPSLet (CPSVal (cpsV τ₁ v)) (λ c → κ (CPSVar c))
+  ⟶⟨ eqLet (sche v) ⟩
+    κ (cpsV τ₁ v)
+  ⟶⟨ eqId ⟩
+    cpsI τ₁ τ₂ τ₂ (Val v) κ
+  ∎
+
+
+correctII κ sche (RShift p₁ p₂ e) = {!!}
+
+-- correctII {var} {τ₁} {τ₂} {.τ₂}
+--           {.(Reset τ₄ τ₁ τ₂ (pcontext-plug {λ x → var (cpsT x)} {τ₄} τ₀ {τ₄} {τ} {τ₁} p₁ (Shift α τ₃ τ₁ τ₀ τ e₁)))}
+--           {.(Reset τ₃ τ₁ τ₂ (App {_} {τ₃} {τ₀ ⇒ τ cps[ α , α ]} {τ₃} {τ₁} {τ₁} {τ₁}
+--                    (Val {_} {(τ₀ ⇒ τ cps[ α , α ]) ⇒ τ₃ cps[ τ₃ , τ₁ ]} {τ₁}
+--                      (Fun τ₃ (τ₀ ⇒ τ cps[ α , α ]) {τ₃} {τ₁} e₁))
+--                    (Val {_} {τ₀ ⇒ τ cps[ α , α ]} {τ₁}
+--                      (Fun τ τ₀ {α} {α}
+--                        (λ x → Reset τ₄ τ α (pcontext-plug {λ x₁ → var (cpsT x₁)} {τ₄} τ₀ {τ₄} {τ} {τ} p₂
+--                          (Val {_} {τ₀} {τ} (Var {_} {τ₀} x))))))))}
+--           κ sche
+--           (RShift {τ₀ = τ₀} {τ₁ = τ₃} {τ₂ = .τ₁} {τ₃ = .τ₂} {τ₄ = τ₄} {τ = τ} {α = α} p₁ p₂ e₁) = {!!}
