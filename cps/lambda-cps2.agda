@@ -838,8 +838,122 @@ shift-lemma : ∀ {τ τ₁ τ₂ τ₃ τ₄ τ₅ α} {var : cpstyp → Set}
                            (App (Val (Fun τ₄ τ₁
                                      (λ x → pcontext-plug τ₁ p₂ (Val (Var x)))))
                                             (Shift α τ τ₃ τ₁ τ₂ e₁)) κ)
-shift-lemma {τ} {τ₁} {τ₂} {τ₃} {.τ₁} {.τ₂} {α} {var} .(Hole {_} {τ₁} {τ₂} {τ₃}) .(Hole {_} {τ₁} {τ₂} {τ₂}) Hole e₁ κ sch = {!!}
-shift-lemma {τ} {τ₁} {τ₂} {τ₃} {τ₄} {τ₅} {α} {var} .(Frame {_} {τ₁} {τ₂} {τ₃} {τ₆} {τ₇} {τ₄} {τ₅} f₁ p₁) .(Frame {_} {τ₁} {τ₂} {τ₂} {τ₆} {τ₇} {τ₄} {τ₅} f₂ p₂) (Frame {τ₄ = τ₆} {τ₅ = τ₇} {τ₆ = .τ₄} {τ₇ = .τ₅} {f₁ = f₁} {f₂ = f₂} x {p₁ = p₁} {p₂ = p₂} x₁) e₁ κ sch = {!!}                                            
+shift-lemma {τ} {τ₁} {τ₂} {τ₃} {.τ₁} {.τ₂} {α} {var}
+  .(Hole {_} {τ₁} {τ₂} {τ₃})
+  .(Hole {_} {τ₁} {τ₂} {τ₂})
+  Hole
+  e₁ κ sch =
+  begin
+    cpsI τ₁ τ₂ τ₃ (pcontext-plug τ₁ Hole (Shift α τ τ₃ τ₁ τ₂ e₁)) κ
+  ≡⟨ refl ⟩
+    cpsI τ₁ τ₂ τ₃ (Shift α τ τ₃ τ₁ τ₂ e₁) κ
+  ≡⟨ refl ⟩
+    CPSLet (CPSVal (CPSFun (λ a → CPSVal (CPSFun
+                           (λ κ′ →
+                           CPSApp (CPSVal (CPSVar κ′)) (κ (CPSVar a)))))))
+           (λ c → cpsI τ τ τ₃ (e₁ c) (λ m → CPSVal m))
+  ⟵⟨ eqLet₁ (λ x → cpsI τ τ τ₃ (e₁ x) λ m → CPSVal m)
+             (eqFun (λ x → eqFun (λ x₁ → eqApp₂ (eqBeta (sch (CPSVar x)))))) ⟩
+    CPSLet (CPSVal (CPSFun (λ a → CPSVal (CPSFun
+                           (λ κ′ →
+                           CPSApp (CPSVal (CPSVar κ′))
+                                  (CPSApp (CPSVal (CPSFun (λ v → κ (CPSVar v))))
+                                          (CPSVal (CPSVar a)))))))) 
+           (λ c → cpsI τ τ τ₃ (e₁ c) (λ m → CPSVal m))
+  ⟵⟨ eqLet₁ (λ x → cpsI τ τ τ₃ (e₁ x) (λ m → CPSVal m))
+              (eqFun (λ x → eqFun (λ x₁ → eqApp₂ (eqBeta (sApp (sVal sVar=) (sVal sVar≠)))))) ⟩
+    CPSLet (CPSVal (CPSFun (λ a → CPSVal (CPSFun
+                           (λ κ′ →
+                           CPSApp (CPSVal (CPSVar κ′))
+                                  (CPSApp (CPSVal (CPSFun (λ k → CPSApp (CPSVal (CPSVar k))
+                                                                         (CPSVal (CPSVar a)))))
+                                          (CPSVal (CPSFun λ v → κ (CPSVar v)))))))))
+           (λ c → cpsI τ τ τ₃ (e₁ c) (λ m → CPSVal m))
+  ⟵⟨ eqLet₁ (λ x → cpsI τ τ τ₃ (e₁ x) (λ m → CPSVal m))
+              (eqFun (λ x → eqFun (λ x₁ → eqApp₂ (eqApp₁ (eqBeta (sVal (sFun (λ x → sApp (sVal sVar≠) (sVal sVar=))))))))) ⟩
+    CPSLet (CPSVal (CPSFun (λ a → CPSVal (CPSFun
+                           (λ κ′ →
+                           CPSApp (CPSVal (CPSVar κ′))
+                                  (CPSApp (CPSApp (CPSVal (CPSFun (λ x → CPSVal (CPSFun
+                                                                  (λ k → CPSApp (CPSVal (CPSVar k))
+                                                                                 (CPSVal (CPSVar x)))))))
+                                                  (CPSVal (CPSVar a)))
+                                          (CPSVal (CPSFun (λ v → κ (CPSVar v))))))))))
+           (λ c → cpsI τ τ τ₃ (e₁ c) (λ m → CPSVal m))
+  ≡⟨ refl ⟩
+    CPSLet (CPSVal (CPSFun (λ a → CPSVal (CPSFun
+                           (λ κ′ →
+                           CPSApp (CPSVal (CPSVar κ′))
+                                  (CPSApp (CPSApp (CPSVal (CPSFun (λ x → CPSVal (CPSFun
+                                                                  (λ k → cpsI′ τ₁ τ₂ τ₂ (Val (Var x)) (CPSVar k))))))
+                                                  (CPSVal (CPSVar a)))
+                                          (CPSVal (CPSFun (λ v → κ (CPSVar v))))))))))
+           (λ c → cpsI τ τ τ₃ (e₁ c) (λ m → CPSVal m))
+  ≡⟨ refl ⟩
+    CPSLet (CPSVal (CPSFun (λ a → CPSVal (CPSFun
+                           (λ κ′ →
+                           CPSApp (CPSVal (CPSVar κ′))
+                                  (CPSApp (CPSApp (CPSVal (CPSFun (λ x → CPSVal (CPSFun
+                                                                  (λ k → cpsI′ τ₁ τ₂ τ₂
+                                                                               (pcontext-plug τ₁ Hole (Val (Var x)))
+                                                                               (CPSVar k))))))
+                                                  (CPSVal (CPSVar a)))
+                                          (CPSVal (CPSFun (λ v → κ (CPSVar v))))))))))
+           (λ c → cpsI τ τ τ₃ (e₁ c) (λ m → CPSVal m))
+  ≡⟨ refl ⟩
+    CPSLet (CPSVal (CPSFun (λ a → CPSVal (CPSFun
+                           (λ κ′ →
+                           CPSApp (CPSVal (CPSVar κ′))
+                                  ((λ n → CPSApp (CPSApp (CPSVal (CPSFun (λ x → CPSVal (CPSFun
+                                                                          (λ k → cpsI′ τ₁ τ₂ τ₂
+                                                                                        (pcontext-plug τ₁ Hole (Val (Var x))) (
+                                                                                        CPSVar k))))))
+                                                          (CPSVal (CPSVar n)))
+                                                  (CPSVal (CPSFun (λ v → κ (CPSVar v)))))
+                                   a))))))
+           (λ c → cpsI τ τ τ₃ (e₁ c) (λ m → CPSVal m))
+  ≡⟨ refl ⟩
+    cpsI τ₁ τ₂ τ₃
+         (Shift α τ τ₃ τ₁ τ₂ e₁)
+         (λ n → CPSApp (CPSApp (CPSVal (CPSFun (λ x → CPSVal (CPSFun
+                                                (λ k → cpsI′ τ₁ τ₂ τ₂
+                                                             (pcontext-plug τ₁ Hole (Val (Var x)))
+                                                             (CPSVar k))))))
+                                (CPSVal n))
+                        (CPSVal (CPSFun (λ v → κ (CPSVar v)))))
+  ≡⟨ refl ⟩
+    cpsI τ₁ τ₂ τ₃
+         (Shift α τ τ₃ τ₁ τ₂ e₁)
+         (λ n → CPSApp (CPSApp (CPSVal (cpsV (τ₁ ⇒ τ₁ cps[ τ₂ , τ₂ ])
+                                             (Fun τ₁ τ₁ (λ x → pcontext-plug τ₁ Hole (Val (Var x))))))
+                                (CPSVal n))
+                        (CPSVal (CPSFun (λ v → κ (CPSVar v)))))
+  ≡⟨ refl ⟩
+    (λ m → cpsI τ₁ τ₂ τ₃
+                 (Shift α τ τ₃ τ₁ τ₂ e₁)
+                 λ n → CPSApp (CPSApp (CPSVal m) (CPSVal n))
+                               (CPSVal (CPSFun (λ v → κ (CPSVar v)))))
+    (cpsV (τ₁ ⇒ τ₁ cps[ τ₂ , τ₂ ])
+          (Fun τ₁ τ₁ (λ x → pcontext-plug τ₁ Hole (Val (Var x)))))
+  ≡⟨ refl ⟩
+    cpsI (τ₁ ⇒ τ₁ cps[ τ₂ , τ₂ ]) τ₃ τ₃
+         (Val (Fun τ₁ τ₁ (λ x → pcontext-plug τ₁ Hole (Val (Var x)))))
+         (λ m → cpsI τ₁ τ₂ τ₃
+                      (Shift α τ τ₃ τ₁ τ₂ e₁)
+                      λ n → CPSApp (CPSApp (CPSVal m) (CPSVal n))
+                                   (CPSVal (CPSFun λ a → κ (CPSVar a))))
+  ⟵⟨ eqId ⟩
+    cpsI τ₁ τ₂ τ₃
+      (App (Val (Fun τ₁ τ₁ (λ x → pcontext-plug τ₁ Hole (Val (Var x)))))
+       (Shift α τ τ₃ τ₁ τ₂ e₁))
+      κ
+  ∎
+  
+shift-lemma {τ} {τ₁} {τ₂} {τ₃} {τ₄} {τ₅} {α} {var}
+  .(Frame {_} {τ₁} {τ₂} {τ₃} {τ₆} {τ₇} {τ₄} {τ₅} f₁ p₁)
+  .(Frame {_} {τ₁} {τ₂} {τ₂} {τ₆} {τ₇} {τ₄} {τ₅} f₂ p₂)
+  (Frame {τ₄ = τ₆} {τ₅ = τ₇} {τ₆ = .τ₄} {τ₇ = .τ₅} {f₁ = f₁} {f₂ = f₂} x {p₁ = p₁} {p₂ = p₂} x₁)
+  e₁ κ sch = {!!}                                            
 
                
 
@@ -973,7 +1087,13 @@ correctII {var} {τ₁} {τ₂} {.τ₂}
   ⟶⟨ {!!} ⟩
     {!!}
   ⟶⟨ {!!} ⟩
-    {!!}
+    cpsI τ₁ τ₂ τ₂
+      (Reset τ₃ τ₁ τ₂
+       (App (Val (Fun τ₃ (τ₀ ⇒ τ cps[ α , α ]) e₁))
+        (Val
+         (Fun τ τ₀
+          (λ x → Reset τ₄ τ α (pcontext-plug τ₀ p₂ (Val (Var x))))))))
+      κ
   ∎
     
 
