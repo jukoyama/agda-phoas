@@ -957,7 +957,10 @@ shift-lemma : ∀ {τ τ₁ τ₂ τ₃ τ₄ τ₅ α} {var : cpstyp → Set}
                            (App (Val (Fun τ₄ τ₁
                                      (λ x → pcontext-plug τ₁ p₂ (Val (Var x)))))
                                             (Shift α τ τ₃ τ₁ τ₂ e₁)) κ)
+<<<<<<< HEAD
 
+=======
+>>>>>>> 85b17510afd0f45f67318dad8b3c63a93f148bc5
 shift-lemma {τ} {τ₁} {τ₂} {τ₃} {.τ₁} {.τ₂} {α} {var}
   .(Hole {_} {τ₁} {τ₂} {τ₃})
   .(Hole {_} {τ₁} {τ₂} {τ₂})
@@ -1028,9 +1031,15 @@ shift-lemma {τ} {τ₁} {τ₂} {τ₃} {.τ₁} {.τ₂} {α} {var}
                                                                           (λ k → cpsI′ τ₁ τ₂ τ₂
                                                                                         (pcontext-plug τ₁ Hole (Val (Var x))) (
                                                                                         CPSVar k))))))
+<<<<<<< HEAD
                                                           (CPSVal n))
                                                   (CPSVal (CPSFun (λ v → κ (CPSVar v)))))
                                    (CPSVar a)))))))
+=======
+                                                          (CPSVal (CPSVar n)))
+                                                  (CPSVal (CPSFun (λ v → κ (CPSVar v)))))
+                                   a))))))
+>>>>>>> 85b17510afd0f45f67318dad8b3c63a93f148bc5
            (λ c → cpsI τ τ τ₃ (e₁ c) (λ m → CPSVal m))
   ≡⟨ refl ⟩
     cpsI τ₁ τ₂ τ₃
@@ -1065,6 +1074,7 @@ shift-lemma {τ} {τ₁} {τ₂} {τ₃} {.τ₁} {.τ₂} {α} {var}
   ⟵⟨ eqId ⟩
     cpsI τ₁ τ₂ τ₃
       (App (Val (Fun τ₁ τ₁ (λ x → pcontext-plug τ₁ Hole (Val (Var x)))))
+<<<<<<< HEAD
            (Shift α τ τ₃ τ₁ τ₂ e₁))
       κ
   ∎
@@ -1303,6 +1313,17 @@ shift-lemma {τ} {τ₁} {τ₂} {τ₃} {τ₄} {τ₅} {α} {var}
                    {f₂ = App₂ {τ₁ = .τ₄} {τ₂ = .τ₆} {τ₃ = .τ₅} {τ₄ = .τ₇} {τ₅ = .τ₂} v₂} x {p₁ = p₁} {p₂ = p₂} c)
             e₁ κ sch = {!!} 
             
+=======
+       (Shift α τ τ₃ τ₁ τ₂ e₁))
+      κ
+  ∎
+  
+shift-lemma {τ} {τ₁} {τ₂} {τ₃} {τ₄} {τ₅} {α} {var}
+  .(Frame {_} {τ₁} {τ₂} {τ₃} {τ₆} {τ₇} {τ₄} {τ₅} f₁ p₁)
+  .(Frame {_} {τ₁} {τ₂} {τ₂} {τ₆} {τ₇} {τ₄} {τ₅} f₂ p₂)
+  (Frame {τ₄ = τ₆} {τ₅ = τ₇} {τ₆ = .τ₄} {τ₇ = .τ₅} {f₁ = f₁} {f₂ = f₂} x {p₁ = p₁} {p₂ = p₂} x₁)
+  e₁ κ sch = {!!}                                            
+>>>>>>> 85b17510afd0f45f67318dad8b3c63a93f148bc5
 
                
 
