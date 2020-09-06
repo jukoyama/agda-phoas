@@ -597,6 +597,17 @@ subst-cont {var} {τ₁} {τ₂} {τ₄} κ₁ v κ₂ =
   cpsSubstVal v₁ v v₁′ →
   cpsSubst (λ y → κ₁ y (v₁ y)) v (κ₂ v₁′)
 
+eqsubst-cont : {var : cpstyp → Set} {τ₁ τ₂ : typ} {τ₄ : cpstyp} →
+               -- (κ₁ : var τ₄ →
+               --       cpsvalue[ var ] (cpsT τ₁) → cpsterm[ var ] (cpsT τ₂)) →
+               (κ : cpsvalue[ var ] (cpsT τ₁) → cpsterm[ var ] (cpsT τ₂)) →
+               (v : cpsvalue[ var ] τ₄) → Set 
+eqsubst-cont {var} {τ₁} {τ₂} {τ₄} κ v =
+  -- {v₁ : var τ₄ → cpsvalue[ var ] (cpsT τ₁)} →
+  {v′ : cpsvalue[ var ] (cpsT τ₁)} →
+  -- cpsSubstVal v′ v v′ →
+  cpsSubst (λ y → κ v′) v (κ v′)
+
 mutual
   SubstV≠ : {var : cpstyp → Set} {τ₁ τ₂ : cpstyp} →
             {t : cpsvalue[ var ] τ₁} →
@@ -683,16 +694,21 @@ mutual
                                                                   (sApp (sVal sVar≠) (sVal sVar≠)))))))
 
 eSubst : {var : cpstyp → Set} {τ₁ τ₂ τ₃ τ : typ} →
-           {e₁ : var (cpsT τ) →
-                 term[ var ∘ cpsT ] τ₁ cps[ τ₂ , τ₃ ]} →
-           {e₂ : term[ var ∘ cpsT ] τ₁ cps[ τ₂ , τ₃ ]} →
-           {v : value[ var ∘ cpsT ] τ cps[τ,τ]} →
-           {κ : cpsvalue[ var ] (cpsT τ₁) → cpsterm[ var ] (cpsT τ₂)} →
-           Subst e₁ v e₂ →
-           subst-cont (λ x → κ) (cpsV τ v) κ →
-           cpsSubst (λ x → cpsI τ₁ τ₂ τ₃ {var = var} (e₁ x) κ)
-                    (cpsV τ v)
-                    (cpsI τ₁ τ₂ τ₃ e₂ κ)
+         {e₁ : var (cpsT τ) →
+               term[ var ∘ cpsT ] τ₁ cps[ τ₂ , τ₃ ]} →
+         {e₂ : term[ var ∘ cpsT ] τ₁ cps[ τ₂ , τ₃ ]} →
+         {v : value[ var ∘ cpsT ] τ cps[τ,τ]} →
+         {κ : cpsvalue[ var ] (cpsT τ₁) → cpsterm[ var ] (cpsT τ₂)} →
+         Subst e₁ v e₂ →
+         subst-cont (λ x → κ) (cpsV τ v) κ →
+         cpsSubst (λ x → cpsI τ₁ τ₂ τ₃ {var = var} (e₁ x) κ)
+                  (cpsV τ v)
+                  (cpsI τ₁ τ₂ τ₃ e₂ κ)
+-- eSubst (sVal x) = {!!}
+-- eSubst (sApp x x₁) = {!!}
+-- eSubst (sShift x) = {!!}
+-- eSubst (sReset x) = {!!} 
+
 eSubst (sVal subv) eq = eq (eSubstV subv)
 eSubst (sApp sub₁ sub₂) eq =
   eκSubst sub₁ (λ m → eκSubst sub₂ (λ n → sApp (sApp (sVal m) (sVal n)) (sVal (sFun (λ a → eq sVar≠)))))
@@ -957,10 +973,6 @@ shift-lemma : ∀ {τ τ₁ τ₂ τ₃ τ₄ τ₅ α} {var : cpstyp → Set}
                            (App (Val (Fun τ₄ τ₁
                                      (λ x → pcontext-plug τ₁ p₂ (Val (Var x)))))
                                             (Shift α τ τ₃ τ₁ τ₂ e₁)) κ)
-<<<<<<< HEAD
-
-=======
->>>>>>> 85b17510afd0f45f67318dad8b3c63a93f148bc5
 shift-lemma {τ} {τ₁} {τ₂} {τ₃} {.τ₁} {.τ₂} {α} {var}
   .(Hole {_} {τ₁} {τ₂} {τ₃})
   .(Hole {_} {τ₁} {τ₂} {τ₂})
@@ -1031,15 +1043,9 @@ shift-lemma {τ} {τ₁} {τ₂} {τ₃} {.τ₁} {.τ₂} {α} {var}
                                                                           (λ k → cpsI′ τ₁ τ₂ τ₂
                                                                                         (pcontext-plug τ₁ Hole (Val (Var x))) (
                                                                                         CPSVar k))))))
-<<<<<<< HEAD
                                                           (CPSVal n))
                                                   (CPSVal (CPSFun (λ v → κ (CPSVar v)))))
                                    (CPSVar a)))))))
-=======
-                                                          (CPSVal (CPSVar n)))
-                                                  (CPSVal (CPSFun (λ v → κ (CPSVar v)))))
-                                   a))))))
->>>>>>> 85b17510afd0f45f67318dad8b3c63a93f148bc5
            (λ c → cpsI τ τ τ₃ (e₁ c) (λ m → CPSVal m))
   ≡⟨ refl ⟩
     cpsI τ₁ τ₂ τ₃
@@ -1074,7 +1080,6 @@ shift-lemma {τ} {τ₁} {τ₂} {τ₃} {.τ₁} {.τ₂} {α} {var}
   ⟵⟨ eqId ⟩
     cpsI τ₁ τ₂ τ₃
       (App (Val (Fun τ₁ τ₁ (λ x → pcontext-plug τ₁ Hole (Val (Var x)))))
-<<<<<<< HEAD
            (Shift α τ τ₃ τ₁ τ₂ e₁))
       κ
   ∎
@@ -1218,24 +1223,37 @@ shift-lemma {τ} {τ₁} {τ₂} {τ₃} {τ₄} {τ₅} {α} {var}
                                     (λ n → CPSApp (CPSApp (CPSVal y) (CPSVal n))
                                                    (CPSVal (CPSFun (λ v → κ (CPSVar v)))))))))))
            (λ c → cpsI τ τ τ₃ (e₁ c) (λ m → CPSVal m))
-  ⟵⟨ {!!} ⟩
+
+  ≡⟨ refl ⟩
     CPSLet (CPSVal (CPSFun (λ a → CPSVal (CPSFun (λ κ′ →
                      CPSApp (CPSVal (CPSVar κ′))
-                            (CPSApp (CPSVal (CPSFun (λ k → cpsI (τ₆ ⇒ τ₄ cps[ τ₅ , τ₈ ]) τ₇ τ₂
-                                                                (pcontext-plug τ₁ p₂′ (Val (Var a)))
-                                                                (λ m₁ → cpsI τ₆ τ₈ τ₇ e₂
-                                                                         λ n₁ → CPSApp (CPSApp (CPSVal m₁) (CPSVal n₁))
-                                                                                       (CPSVal (CPSVar k))))))
+                            (cpsI (τ₆ ⇒ τ₄ cps[ τ₅ , τ₈ ]) τ₇ τ₂ (pcontext-plug τ₁ p₂′ (Val (Var a)))
+                                  (λ m₁ → cpsI τ₆ τ₈ τ₇ e₂
+                                                (λ n₁ → CPSApp (CPSApp (CPSVal m₁) (CPSVal n₁))
+                                                                (CPSVal (CPSFun (λ v → κ (CPSVar v))))))))))))
+           (λ c → cpsI τ τ τ₃ (e₁ c) (λ m → CPSVal m))
+
+  ⟵⟨ eqLet₁ (λ c₁ → cpsI τ τ τ₃ (e₁ c₁) (λ m → CPSVal m))
+              (eqFun (λ a → eqFun (λ κ′ → eqApp₂ (eqBeta
+              (κSubst (pcontext-plug τ₁ p₂′ (Val (Var a)))
+                       (λ k m₁ → cpsI τ₆ τ₈ τ₇ e₂
+                                       (λ n₁ → CPSApp (CPSApp (CPSVal m₁) (CPSVal n₁)) (CPSVal k)))
+                       λ x → κSubst e₂ (λ y n₁ → CPSApp (CPSApp (CPSVal x) (CPSVal n₁)) (CPSVal y))
+                                     λ x₁ → sApp (sApp Subst≠ Subst≠) (sVal sVar=)))))) ⟩
+    CPSLet (CPSVal (CPSFun (λ a → CPSVal (CPSFun (λ κ′ →
+                     CPSApp (CPSVal (CPSVar κ′))
+                            (CPSApp (CPSVal (CPSFun (λ k →
+                                     cpsI (τ₆ ⇒ τ₄ cps[ τ₅ , τ₈ ]) τ₇ τ₂ (pcontext-plug τ₁ p₂′ (Val (Var a)))
+                                          (λ m₁ → cpsI τ₆ τ₈ τ₇ e₂
+                                                   (λ n₁ → CPSApp (CPSApp (CPSVal m₁) (CPSVal n₁))
+                                                                   (CPSVal (CPSVar k)))))))
                                     (CPSVal (CPSFun (λ v → κ (CPSVar v))))))))))
            (λ c → cpsI τ τ τ₃ (e₁ c) (λ m → CPSVal m))
-  ⟵⟨ eqLet₁ (λ c → cpsI τ τ τ₃ (e₁ c) (λ m → CPSVal m))
-             (eqFun (λ a → eqFun (λ κ′ → eqApp₂ (eqApp₁ (eqBeta (sVal (sFun λ k →
-             eSubst {e₁ = (λ x → pcontext-plug τ₁ p₂′ (Val (Var x)))} {e₂ = pcontext-plug τ₁ p₂′ (Val (Var a))}
-                    {v = Var a}
-                    (subst-context p₂′ (Var a))
-                    λ sub → κSubst e₂ (λ v′ → λ n₁ → CPSApp (CPSApp (CPSVal {!v₁′!}) (CPSVal n₁)) (CPSVal (CPSVar k)))
-                                    {!!})
-                     )))))) ⟩
+  ⟵⟨ eqLet₁ (λ c₁ → cpsI τ τ τ₃ (e₁ c₁) (λ m → CPSVal m))
+              (eqFun (λ a → eqFun (λ κ′ → eqApp₂ (eqApp₁ (eqBeta (sVal (sFun (λ x →
+              eSubst (subst-context p₂′ (Var a))
+                     λ x₁ → eκSubst {e₁ = λ y → e₂} {e₂ = e₂} pSubst≠
+                     λ x₂ → sApp (sApp (sVal x₁) (sVal x₂)) Subst≠)))))))) ⟩
     CPSLet (CPSVal (CPSFun (λ a → CPSVal (CPSFun (λ κ′ →
                      CPSApp (CPSVal (CPSVar κ′))
                             (CPSApp (CPSApp (CPSVal (CPSFun (λ x → CPSVal (CPSFun (λ k →
@@ -1305,25 +1323,39 @@ shift-lemma {τ} {τ₁} {τ₂} {τ₃} {τ₄} {τ₅} {α} {var}
          κ
   ∎
 
+
+-- shift-lemma {τ} {τ₁} {τ₂} {τ₃} {τ₄} {τ₅} {α} {var}
+--             .(Frame {_} {τ₁} {τ₂} {τ₃} {τ₆ ⇒ τ₄ cps[ τ₅ , τ₈ ]} {τ₇} {τ₄} {τ₅}
+--               (App₁ {_} {τ₄} {τ₆} {τ₅} {τ₈} {τ₇} {τ₃} e₂) p₁′)
+--             .(Frame {_} {τ₁} {τ₂} {τ₂} {τ₆ ⇒ τ₄ cps[ τ₅ , τ₈ ]} {τ₇} {τ₄} {τ₅}
+--               (App₁ {_} {τ₄} {τ₆} {τ₅} {τ₈} {τ₇} {τ₂} e₂) p₂′)
+--              (Frame {τ₄ = .(τ₆ ⇒ τ₄ cps[ τ₅ , τ₈ ])} {τ₅ = τ₇} {τ₆ = .τ₄} {τ₇ = .τ₅}
+--                {f₁ = App₁ {τ₁ = .τ₄} {τ₂ = τ₆} {τ₃ = .τ₅} {τ₄ = τ₈} {τ₅ = .τ₇} {τ₆ = .τ₃} e₂}
+--                {f₂ = App₁ {τ₁ = .τ₄} {τ₂ = .τ₆} {τ₃ = .τ₅} {τ₄ = .τ₈} {τ₅ = .τ₇} {τ₆ = .τ₂} .e₂}
+--                (App₁ {τ₂ = .τ₆} {τ₄ = .τ₈} {τ₆ = .τ₂} .e₂) {p₁ = p₁′} {p₂ = p₂′} c)
+--              e₁ κ sch =
+
 shift-lemma {τ} {τ₁} {τ₂} {τ₃} {τ₄} {τ₅} {α} {var}
-           .(Frame {_} {τ₁} {τ₂} {τ₃} {τ₆} {τ₇} {τ₄} {τ₅} (App₂ {_} {τ₄} {τ₆} {τ₅} {τ₇} {τ₃} v₁) p₁)
-           .(Frame {_} {τ₁} {τ₂} {τ₂} {τ₆} {τ₇} {τ₄} {τ₅} (App₂ {_} {τ₄} {τ₆} {τ₅} {τ₇} {τ₂} v₂) p₂)
+            .(Frame {_} {τ₁} {τ₂} {τ₃} {τ₆} {τ₇} {τ₄} {τ₅} (App₂ {_} {τ₄} {τ₆} {τ₅} {τ₇} {τ₃} v₁) p₁′)
+            .(Frame {_} {τ₁} {τ₂} {τ₂} {τ₆} {τ₇} {τ₄} {τ₅} (App₂ {_} {τ₄} {τ₆} {τ₅} {τ₇} {τ₂} v₁) p₂′)
             (Frame {τ₄ = τ₆} {τ₅ = τ₇} {τ₆ = .τ₄} {τ₇ = .τ₅}
                    {f₁ = App₂ {τ₁ = .τ₄} {τ₂ = .τ₆} {τ₃ = .τ₅} {τ₄ = .τ₇} {τ₅ = .τ₃} v₁}
-                   {f₂ = App₂ {τ₁ = .τ₄} {τ₂ = .τ₆} {τ₃ = .τ₅} {τ₄ = .τ₇} {τ₅ = .τ₂} v₂} x {p₁ = p₁} {p₂ = p₂} c)
-            e₁ κ sch = {!!} 
-            
-=======
-       (Shift α τ τ₃ τ₁ τ₂ e₁))
+                   {f₂ = App₂ {τ₁ = .τ₄} {τ₂ = .τ₆} {τ₃ = .τ₅} {τ₄ = .τ₇} {τ₅ = .τ₂} .v₁}
+                   (App₂ {τ₂ = .τ₆} {τ₆ = .τ₂} .v₁) {p₁ = p₁′} {p₂ = p₂′} c)
+            e₁ κ sch =
+  begin
+    cpsI τ₄ τ₅ τ₃
+      (pcontext-plug τ₁ (Frame (App₂ v₁) p₁′) (Shift α τ τ₃ τ₁ τ₂ e₁)) κ
+  ≡⟨ {!!} ⟩
+    {!!}
+  ⟶⟨ {!!} ⟩
+    {!!}
+  ≡⟨ {!!} ⟩
+    cpsI τ₄ τ₅ τ₃
+      (App (Val (Fun τ₄ τ₁ (λ x → pcontext-plug τ₁ (Frame (App₂ v₁) p₂′) (Val (Var x)))))
+           (Shift α τ τ₃ τ₁ τ₂ e₁))
       κ
   ∎
-  
-shift-lemma {τ} {τ₁} {τ₂} {τ₃} {τ₄} {τ₅} {α} {var}
-  .(Frame {_} {τ₁} {τ₂} {τ₃} {τ₆} {τ₇} {τ₄} {τ₅} f₁ p₁)
-  .(Frame {_} {τ₁} {τ₂} {τ₂} {τ₆} {τ₇} {τ₄} {τ₅} f₂ p₂)
-  (Frame {τ₄ = τ₆} {τ₅ = τ₇} {τ₆ = .τ₄} {τ₇ = .τ₅} {f₁ = f₁} {f₂ = f₂} x {p₁ = p₁} {p₂ = p₂} x₁)
-  e₁ κ sch = {!!}                                            
->>>>>>> 85b17510afd0f45f67318dad8b3c63a93f148bc5
 
                
 
