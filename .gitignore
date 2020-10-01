@@ -1,0 +1,37 @@
+# general
+*~
+.DS_Store
+._*
+\#*#
+.#*
+
+# OCaml
+*.cm[ioxat]
+*.cmx[as]
+*.cmti
+*.annot
+*.o
+*.a
+._bcdi
+._d
+
+# latex
+*.aux
+*.log
+*.dvi
+*.nav
+*.out
+*.snm
+*.synctex.gz
+*.pdfsync
+*.toc
+*.vrb
+*.bbl
+*.blg
+*.ptb
+*.xcp
+*.pdf
+
+# agda
+*.agdai
+.agda-lib
