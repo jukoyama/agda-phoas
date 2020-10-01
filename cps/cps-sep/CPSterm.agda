@@ -236,6 +236,12 @@ data cpsequal {var : cpstyp → Set} :
              {e₁ : var τ₁ → cpsterm[ var ] τ₂} →
              cpsequal (CPSLet (CPSVal v₁) (λ x → e₁ x))
                       (CPSApp (CPSVal (CPSFun (λ x → e₁ x))) (CPSVal v₁))
+  eqLetApp₂ : {τ₁ τ₂ : cpstyp} →
+             -- {v₁ : cpsvalue[ var ] τ₁} →
+             {e₁′ : cpsterm[ var ] τ₁} →
+             {e₁ : var τ₁ → cpsterm[ var ] τ₂} →
+             cpsequal (CPSLet e₁′ (λ x → e₁ x))
+                      (CPSApp (CPSVal (CPSFun (λ x → e₁ x))) e₁′)                      
   eqId     : {τ₁ : cpstyp} →
              {e : cpsterm[ var ] τ₁} →
              cpsequal e e

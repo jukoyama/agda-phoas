@@ -9,43 +9,6 @@ open import lemma3
 open import Function
 open import Relation.Binary.PropositionalEquality
 
-  -- cpsI′ : (τ₁ τ₂ τ₃ : typ) → {var : cpstyp → Set} →
-  --         term[ var ∘ cpsT ] τ₁ cps[ τ₂ , τ₃ ] →
-  --         cpsvalue[ var ] (cpsT τ₁ ⇒ cpsT τ₂) →
-  --         cpsterm[ var ] (cpsT τ₃)
-
-  -- cpsI′ τ₁ τ₂ .τ₂ (Reset τ₃ .τ₁ .τ₂ e₁) k =
-  --   -- CPSApp (CPSVal k) (cpsI τ₃ τ₃ τ₁ e₁ (λ m → CPSVal m)) 
-  --   CPSLet (cpsI τ₃ τ₃ τ₁ e₁ (λ m → CPSVal m)) (λ a → CPSApp (CPSVal k) (CPSVal (CPSVar a)))
-
-cpsResetEqual : {var : cpstyp → Set} → {τ₁ τ₂ τ₃ : typ} →
-                (e₁ : term[ var ∘ cpsT ] τ₃ cps[ τ₃ , τ₁ ]) →
-                {k : cpsvalue[ var ] (cpsT τ₁ ⇒ cpsT τ₂)} →
-                -- (κ : cpsvalue[ var ] (cpsT τ₃) → cpsterm[ var ] (cpsT τ₃)) →
-                cpsequal
-                  (CPSLet (cpsI τ₃ τ₃ τ₁ e₁ (λ m → CPSVal m))
-                          λ c → CPSApp (CPSVal k) (CPSVal (CPSVar c)))
-                  (CPSApp (CPSVal k) (cpsI τ₃ τ₃ τ₁ e₁ (λ m → CPSVal m)))
-
-cpsResetEqual {var} {τ₁} {τ₂} {.τ₁} (Val {τ₁ = .τ₁} {τ₂ = .τ₁} x) {k} = eqLet (sApp Subst≠ (sVal sVar=))
-cpsResetEqual {var} {τ₁} {τ₂} {τ₃} (App {τ₁ = .τ₃} {τ₂ = τ₄} {τ₃ = .τ₃} {τ₄ = τ₅} {τ₅ = τ₆} {τ₆ = .τ₁} e₁ e₂) {k} =
-  begin
-    CPSLet (cpsI τ₃ τ₃ τ₁ (App e₁ e₂) (λ m → CPSVal m))
-           (λ c → CPSApp (CPSVal k) (CPSVal (CPSVar c)))
-  ≡⟨ refl ⟩
-    CPSLet (cpsI (τ₄ ⇒ τ₃ cps[ τ₃ , τ₅ ]) τ₆ τ₁ e₁
-             (λ m → cpsI τ₄ τ₅ τ₆ e₂ (λ n →
-                CPSApp (CPSApp (CPSVal m) (CPSVal n)) (CPSVal (CPSFun (λ a → CPSVal (CPSVar a)))))))
-             (λ c → CPSApp (CPSVal k) (CPSVal (CPSVar c)))
-  ⟶⟨ {!!} ⟩
-    {!!}
-  ⟶⟨ {!!} ⟩
-    CPSApp (CPSVal k) (cpsI τ₃ τ₃ τ₁ (App e₁ e₂) (λ m → CPSVal m))
-  ∎
-cpsResetEqual {var} {τ₁} {τ₂} {.τ₁} (Reset τ₃ .τ₁ .τ₁ e₁) {k} = {!!}
-cpsResetEqual {var} {τ₁} {τ₂} {τ₃} (Shift τ τ₄ .τ₁ .τ₃ .τ₃ x) {k} = {!!}
-
-
 {----------------Term Definition----------------}
 
 correctII : {var : cpstyp → Set} → {τ₁ τ₂ τ₃ : typ} →
@@ -255,7 +218,16 @@ correctII {var} {τ₁} {τ₂} {.τ₂}
                    λ c₁ → cpsI τ₃ τ₃ τ₁ (e₁ c₁) (λ m → CPSVal m))
            (λ c → κ (CPSVar c))
   ⟵⟨ eqLet₁ (λ c → κ (CPSVar c)) (eqLet₁ (λ c₁ → cpsI τ₃ τ₃ τ₁ (e₁ c₁) (λ m → CPSVal m))
-        (eqFun (λ x′ → eqFun (λ k′ → {!eqLetApp!})))) ⟩
+        (eqFun (λ x′ → eqFun (λ k′ → eqOmega {con = CPSFrame (CPSApp₂ (CPSVar k′)) CPSHole} )))) ⟩
+    CPSLet (CPSLet (CPSVal (CPSFun (λ x′ → CPSVal (CPSFun λ k′ →
+                      CPSApp (CPSVal (CPSFun (λ c₂ → CPSApp (CPSVal (CPSVar k′)) (CPSVal (CPSVar c₂)))))
+                             (cpsI τ₄ τ₄ τ (pcontext-plug τ₀ p₂ (Val (Var x′)))
+                                             (λ m → CPSVal m))
+                             ))))
+                   λ c₁ → cpsI τ₃ τ₃ τ₁ (e₁ c₁) (λ m → CPSVal m))
+           (λ c → κ (CPSVar c))
+  ⟵⟨ eqLet₁ (λ c → κ (CPSVar c)) (eqLet₁ (λ c₁ → cpsI τ₃ τ₃ τ₁ (e₁ c₁) (λ m → CPSVal m))
+        (eqFun (λ x′ → eqFun (λ k′ → eqLetApp₂)))) ⟩
     CPSLet (CPSLet (CPSVal (CPSFun (λ x′ → CPSVal (CPSFun λ k′ →
                       CPSLet (cpsI τ₄ τ₄ τ (pcontext-plug τ₀ p₂ (Val (Var x′))) (λ m → CPSVal m))
                              (λ c₂ → CPSApp (CPSVal (CPSVar k′)) (CPSVal (CPSVar c₂)))))))
