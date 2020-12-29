@@ -15,8 +15,9 @@ contextContE : {var : cpstyp → Set} → {τ τ₀ τ₁ τ₂ τ₃ τ₄ τ�
                (p₂ : pcontext[ var ∘ cpsT , τ₃ cps[ τ₀ , τ₀ ]] τ₂ cps[ τ₅ , τ₄ ]) →
                same-pcontext p₁ p₂ →
                schematic κ →
-               cpsequal (cpsI τ₂ τ₅ τ (pcontext-plug p₁ (NonVal (App (Val Shift) (Val v)))) κ)
-                        (cpsI′ τ₃ τ₄ τ (NonVal (App (Val Shift) (Val v)))
+               (cpsI τ₂ τ₅ τ (pcontext-plug p₁ (NonVal (App (Val Shift) (Val v)))) κ)
+               ≡
+               (cpsI′ τ₃ τ₄ τ (NonVal (App (Val Shift) (Val v)))
                                 (CPSFun λ a → cpsI τ₂ τ₅ τ₄ (pcontext-plug p₂ (Val (Var a))) κ))
 contextContE {var} {τ} {τ₀} {τ₁} {τ₂} {.τ₂} {.τ₀} {.τ₀} v κ
               .(Hole {_} {τ₂} {τ₀} {τ})
@@ -39,6 +40,7 @@ contextContE {var} {τ} {τ₀} {τ₁} {τ₂} {.τ₂} {.τ₀} {.τ₀} v κ
     cpsI τ₂ τ₀ τ
       (pcontext-plug Hole (NonVal (App (Val Shift) (Val v)))) κ
   ∎
+  where open ≡-Reasoning
 
 contextContE {var} {τ} {τ₀} {τ₁} {τ₂} {τ₃} {τ₄} {τ₅} v κ
               .(Frame {_} {τ₃} {τ₄} {τ} {τ₆ ⇒ τ₂ cps[ τ₅ , τ₈ ]} {τ₇} {τ} {τ₂} {τ₅} {τ}
@@ -66,13 +68,13 @@ contextContE {var} {τ} {τ₀} {τ₁} {τ₂} {τ₃} {τ₄} {τ₅} v κ
     cpsI (τ₆ ⇒ τ₂ cps[ τ₅ , τ₈ ]) τ₇ τ (pcontext-plug p₁ (NonVal (App (Val Shift) (Val v))))
          (λ m → cpsI τ₆ τ₈ τ₇ e₂
          (λ n → CPSApp (CPSApp (CPSVal m) (CPSVal n)) (CPSVal (CPSFun (λ a → κ (CPSVar a))))))
-  ⟶⟨ contextContE v (λ m → cpsI τ₆ τ₈ τ₇ e₂
-                             (λ n → CPSApp (CPSApp (CPSVal m) (CPSVal n)) (CPSVal (CPSFun (λ a → κ (CPSVar a))))))
-                   p₁ p₂ same-con
-                   (λ v₁ → κSubst e₂
-                               (λ m n → CPSApp (CPSApp (CPSVal m) (CPSVal n))
-                                                (CPSVal (CPSFun λ a → κ (CPSVar a))))
-                               λ x → sApp (sApp (sVal sVar=) Subst≠) Subst≠) ⟩
+  ≡⟨ contextContE v (λ m → cpsI τ₆ τ₈ τ₇ e₂
+                    (λ n → CPSApp (CPSApp (CPSVal m) (CPSVal n)) (CPSVal (CPSFun (λ a → κ (CPSVar a))))))
+                  p₁ p₂ same-con
+                  (λ v₁ → κSubst e₂
+                           (λ m n → CPSApp (CPSApp (CPSVal m) (CPSVal n))
+                                            (CPSVal (CPSFun λ a → κ (CPSVar a))))
+                            λ x → sApp (sApp (sVal sVar=) Subst≠) Subst≠) ⟩
     cpsI′ τ₃ τ₄ τ (NonVal (App (Val Shift) (Val v)))
           (CPSFun (λ a′ → cpsI (τ₆ ⇒ τ₂ cps[ τ₅ , τ₈ ]) τ₇ τ₄ (pcontext-plug p₂ (Val (Var a′)))
                   (λ m → cpsI τ₆ τ₈ τ₇ e₂
@@ -85,6 +87,7 @@ contextContE {var} {τ} {τ₀} {τ₁} {τ₂} {τ₃} {τ₄} {τ₅} v κ
     cpsI′ τ₃ τ₄ τ (NonVal (App (Val Shift) (Val v)))
           (CPSFun (λ a → cpsI τ₂ τ₅ τ₄ (pcontext-plug (Frame (App₁ e₂) p₂) (Val (Var a))) κ))
   ∎
+   where open ≡-Reasoning
                      
 contextContE {var} {τ} {τ₀} {τ₁} {τ₂} {τ₃} {τ₄} {τ₅} v κ
               .(Frame {_} {τ₃} {τ₄} {τ} {τ₆} {τ₇} {τ} {τ₂} {τ₅} {τ}
@@ -114,7 +117,7 @@ contextContE {var} {τ} {τ₀} {τ₁} {τ₂} {τ₃} {τ₄} {τ₅} v κ
   ≡⟨ refl ⟩
     cpsI τ₆ τ₇ τ (pcontext-plug p₁ (NonVal (App (Val Shift) (Val v))))
          (λ n → CPSApp (CPSApp (CPSVal (cpsV (τ₆ ⇒ τ₂ cps[ τ₅ , τ₇ ]) v₁)) (CPSVal n)) (CPSVal (CPSFun (λ a → κ (CPSVar a)))))
-  ⟶⟨ contextContE v
+  ≡⟨ contextContE v
          (λ n → CPSApp (CPSApp (CPSVal (cpsV (τ₆ ⇒ τ₂ cps[ τ₅ , τ₇ ]) v₁)) (CPSVal n)) (CPSVal (CPSFun (λ a → κ (CPSVar a)))))
          p₁ p₂ same-con
          (λ v₂ → sApp (sApp Subst≠ (sVal sVar=)) Subst≠) ⟩
@@ -137,7 +140,7 @@ contextContE {var} {τ} {τ₀} {τ₁} {τ₂} {τ₃} {τ₄} {τ₅} v κ
     cpsI′ τ₃ τ₄ τ (NonVal (App (Val Shift) (Val v)))
           (CPSFun (λ a → cpsI τ₂ τ₅ τ₄ (pcontext-plug (Frame (App₂ v₁) p₂) (Val (Var a))) κ))
   ∎
-
+  where open ≡-Reasoning
 
 contextContE {var} {τ} {τ₀} {τ₁} {τ₂} {τ₃} {τ₄} {τ₅} v κ
               .(Frame {_} {τ₃} {τ₄} {τ} {τ₆} {τ₇} {τ} {τ₂} {τ₅} {τ}
@@ -164,7 +167,7 @@ contextContE {var} {τ} {τ₀} {τ₁} {τ₂} {τ₃} {τ₄} {τ₅} v κ
   ≡⟨ refl ⟩
     cpsI τ₆ τ₇ τ (pcontext-plug p₁ (NonVal (App (Val Shift) (Val v))))
          (λ m → CPSLet (CPSVal m) (λ x → cpsI τ₂ τ₅ τ₇ (e₂ x) κ))
-  ⟶⟨ contextContE v
+  ≡⟨ contextContE v
         (λ m → CPSLet (CPSVal m) (λ x → cpsI τ₂ τ₅ τ₇ (e₂ x) κ))
         p₁ p₂ same-con
         (λ v₁ → sLet (λ x → Subst≠) (λ x → sVal sVar=)) ⟩
@@ -175,4 +178,5 @@ contextContE {var} {τ} {τ₀} {τ₁} {τ₂} {τ₃} {τ₄} {τ₅} v κ
     cpsI′ τ₃ τ₄ τ (NonVal (App (Val Shift) (Val v)))
           (CPSFun (λ a → cpsI τ₂ τ₅ τ₄ (pcontext-plug (Frame (Let e₂) p₂) (Val (Var a))) κ))
   ∎
+  where open ≡-Reasoning
 

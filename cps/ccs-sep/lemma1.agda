@@ -2,6 +2,7 @@ module lemma1 where
 
 open import DSterm
 open import CPSterm
+open import reasoning
 
 open import Function
 

@@ -2,6 +2,7 @@ module lemma2 where
 
 open import DSterm
 open import CPSterm
+open import reasoning
 open import lemma1
 
 open import Data.Product
