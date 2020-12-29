@@ -1,4 +1,4 @@
-module DSterm where
+module DSterm3 where
 
 open import Data.Unit
 open import Data.Empty
@@ -26,26 +26,26 @@ mutual
                ⇒ τ₃ cps[ τ₄ , τ₂ ])
                cps[τ,τ]
 
-
-  data term[_]_cps[_,_] (var : typ → Set) : typ → typ → typ → Set where
-    Val   : {τ₁ τ₂ : typ} →
-            value[ var ] τ₁ cps[τ,τ] →
-            term[ var ] τ₁ cps[ τ₂ , τ₂ ]
+  data nonvalue[_]_cps[_,_] (var : typ → Set) : typ → typ → typ → Set where
     App   : {τ₁ τ₂ τ₃ τ₄ τ₅ τ₆ : typ} →
             term[ var ] (τ₂ ⇒ τ₁ cps[ τ₃ , τ₄ ]) cps[ τ₅ , τ₆ ] →
             term[ var ] τ₂ cps[ τ₄ , τ₅ ] →
-            term[ var ] τ₁ cps[ τ₃ , τ₆ ]
+            nonvalue[ var ] τ₁ cps[ τ₃ , τ₆ ]
     Reset : (τ₁ τ₂ τ₃ : typ) →
             term[ var ] τ₁ cps[ τ₁ , τ₂ ] →
-            term[ var ] τ₂ cps[ τ₃ , τ₃ ]
-    -- Shift : (τ τ₁ τ₂ τ₃ τ₄ : typ) →
-    --         (var (τ₃ ⇒ τ₄ cps[ τ , τ ]) →
-    --         term[ var ] τ₁ cps[ τ₁ , τ₂ ]) →
-    --         term[ var ] τ₃ cps[ τ₄ , τ₂ ]
-    Let : {τ₁ τ₂ α β γ : typ} →
-          term[ var ] τ₁ cps[ β , γ ] →                -- e1
-          (var τ₁ → term[ var ] τ₂ cps[ α , β ]) →     -- λx. e2
-          term[ var ] τ₂ cps[ α , γ ]
+            nonvalue[ var ] τ₂ cps[ τ₃ , τ₃ ]
+    Let   : {τ₁ τ₂ α β γ : typ} →
+            term[ var ] τ₁ cps[ β , γ ] →                -- e1
+            (var τ₁ → term[ var ] τ₂ cps[ α , β ]) →    -- λx. e2
+            nonvalue[ var ] τ₂ cps[ α , γ ]
+
+  data term[_]_cps[_,_] (var : typ → Set) : typ → typ → typ → Set where
+    Val    : {τ₁ τ₂ : typ} →
+             value[ var ] τ₁ cps[τ,τ] →
+             term[ var ] τ₁ cps[ τ₂ , τ₂ ]
+    NonVal : {τ₁ τ₂ τ₃ : typ} →
+             nonvalue[ var ] τ₁ cps[ τ₂ , τ₃ ] →
+             term[ var ] τ₁ cps[ τ₂ , τ₃ ]
 
 -- M[ v / x]
 -- substitution relation
@@ -54,7 +54,7 @@ mutual
                 (var τ₁ → value[ var ] τ₂ cps[τ,τ]) →
                 value[ var ] τ₁ cps[τ,τ] →
                 value[ var ] τ₂ cps[τ,τ] → Set where
-　　 -- (λx.x)[v] → v                
+　　 -- (λx.x)[v] → v
     sVar=  : {τ₁ : typ} {v : value[ var ] τ₁ cps[τ,τ]} →
              SubstVal (λ x → Var x) v v
     -- (λ_.x)[v] → x
@@ -95,29 +95,17 @@ mutual
                                cps[ τ₅ , τ₆ ]}
             {e₂′ : term[ var ] τ₂ cps[ τ₄ , τ₅ ]} →
             Subst e₁ v e₁′ → Subst e₂ v e₂′ →
-            Subst (λ y → App (e₁ y) (e₂ y))
+            Subst (λ y → NonVal (App (e₁ y) (e₂ y)))
                   v
-                  (App e₁′ e₂′)
-    -- sShift : {τ τ₁ τ₂ τ₃ τ₄ τ₅ : typ} →
-    --          {e₁ : var τ₅ →
-    --                var (τ₃ ⇒ τ₄ cps[ τ , τ ]) →
-    --                term[ var ] τ₁ cps[ τ₁ , τ₂ ]} →
-    --          {v  : value[ var ]  τ₅ cps[τ,τ]} →
-    --          {e₁′ : var (τ₃ ⇒ τ₄ cps[ τ , τ ]) →
-    --                term[ var ] τ₁ cps[ τ₁ , τ₂ ]} →
-    --          ((k : var (τ₃ ⇒ τ₄ cps[ τ , τ ])) →
-    --                Subst (λ y → (e₁ y) k) v (e₁′ k)) →
-    --          Subst (λ y → Shift τ τ₁ τ₂ τ₃ τ₄ (e₁ y))
-    --                v
-    --                (Shift τ τ₁ τ₂ τ₃ τ₄ e₁′)
+                  (NonVal (App e₁′ e₂′))
     sReset : {τ τ₁ τ₂ τ₃ : typ} →
              {e₁ : var τ → term[ var ] τ₁ cps[ τ₁ , τ₂ ]} →
              {v : value[ var ] τ cps[τ,τ]} →
              {e₁′ : term[ var ] τ₁ cps[ τ₁ , τ₂ ]} →
              Subst e₁ v e₁′ →
-             Subst {τ₃ = τ₃} (λ y → Reset τ₁ τ₂ τ₃ (e₁ y))
+             Subst {τ₃ = τ₃} (λ y → NonVal (Reset τ₁ τ₂ τ₃ (e₁ y)))
                    v
-                   (Reset τ₁ τ₂ τ₃ e₁′)
+                   (NonVal (Reset τ₁ τ₂ τ₃ e₁′))
     sLet   : {τ τ₁ τ₂ α β γ : typ} →
              {e₁ : var τ → term[ var ] τ₁ cps[ β , γ ]} →
              {e₂ : var τ → (var τ₁ → term[ var ] τ₂ cps[ α , β ])} →
@@ -126,9 +114,9 @@ mutual
              {e₂′ : var τ₁ → term[ var ] τ₂ cps[ α , β ]} →
              ((x : var τ₁) → Subst (λ y → (e₂ y) x) v (e₂′ x)) →
              Subst e₁ v e₁′ →
-             Subst (λ y → Let (e₁ y) (e₂ y))
+             Subst (λ y → NonVal (Let (e₁ y) (e₂ y)))
                    v
-                   (Let e₁′ e₂′)
+                   (NonVal (Let e₁′ e₂′))
 
 -- mutual
   DSubstV≠ : {var : typ → Set} {τ₁ τ₂ : typ} →
@@ -139,17 +127,15 @@ mutual
   DSubstV≠ {t = Var x} = sVar≠
   DSubstV≠ {t = Fun τ₁ τ₃ e₁} = sFun (λ x → DSubst≠)
   DSubstV≠ {t = Shift} = sShift
-  
 
   DSubst≠ : {var : typ → Set} {τ₁ τ₂ τ₃ τ₄ : typ} →
             {t : term[ var ] τ₁ cps[ τ₃ , τ₄ ]} →
             {v : value[ var ] τ₂ cps[τ,τ]} →
-            Subst (λ y → t) v t      
+            Subst (λ y → t) v t
   DSubst≠ {t = Val x} = sVal DSubstV≠
-  DSubst≠ {t = App e₁ e₂} = sApp DSubst≠ DSubst≠
-  DSubst≠ {t = Reset τ₁ τ₄ τ₃ e} = sReset DSubst≠
-  DSubst≠ {t = Let e₁ e₂} = sLet (λ x → DSubst≠) DSubst≠
-  -- DSubst≠ {t = Shift τ τ₁ τ₃ τ₄ τ₅ x} = sShift (λ k → DSubst≠)
+  DSubst≠ {t = NonVal (App e₁ e₂)} = sApp DSubst≠ DSubst≠
+  DSubst≠ {t = NonVal (Reset τ₁ τ₄ τ₃ e)} = sReset DSubst≠
+  DSubst≠ {t = NonVal (Let e₁ e₂)} = sLet (λ x → DSubst≠) DSubst≠
 
 -- E = [] | EM | VE
 -- F = ([] @ e₂) | (v₁ @ []) | ⟨ [] ⟩ | let x = [] in e₂
@@ -175,10 +161,10 @@ frame-plug : {var : typ → Set}
              frame[ var , τ₂ cps[ τ₄ , τ₅ ]] τ₁ cps[ τ₃ , τ₆ ] →
              term[ var ] τ₂ cps[ τ₄ , τ₅ ] →
              term[ var ] τ₁ cps[ τ₃ , τ₆ ]
-frame-plug (App₁ e₂) e₁ = App e₁ e₂
-frame-plug (App₂ v₁) e₂ = App (Val v₁) e₂
-frame-plug {τ₁ = τ₁} {τ₂} {τ₃} Reset e₁ = Reset τ₂ τ₁ τ₃ e₁
-frame-plug (Let e₂) e₁ = Let e₁ e₂
+frame-plug (App₁ e₂) e₁ = NonVal (App e₁ e₂)
+frame-plug (App₂ v₁) e₂ = NonVal (App (Val v₁) e₂)
+frame-plug {τ₁ = τ₁} {τ₂} {τ₃} Reset e₁ = NonVal (Reset τ₂ τ₁ τ₃ e₁)
+frame-plug (Let e₂) e₁ = NonVal (Let e₁ e₂)
 
 -- pure frame
 data pframe[_,_cps[_,_]]_cps[_,_] (var : typ → Set)
@@ -195,69 +181,71 @@ data pframe[_,_cps[_,_]]_cps[_,_] (var : typ → Set)
          pframe[ var , τ₁ cps[ β , γ ]] τ₂ cps[ α , γ ]
 
 pframe-plug : {var : typ → Set}
-             {τ₁ τ₂ τ₃ τ₄ τ₅ : typ} →
-             pframe[ var , τ₂ cps[ τ₄ , τ₅ ]] τ₁ cps[ τ₃ , τ₅ ] →
-             term[ var ] τ₂ cps[ τ₄ , τ₅ ] →
-             term[ var ] τ₁ cps[ τ₃ , τ₅ ]
-pframe-plug (App₁ e₂) e₁ = App e₁ e₂
-pframe-plug (App₂ v₁) e₂ = App (Val v₁) e₂
-pframe-plug (Let e₂)  e₁ = Let e₁ e₂
+             {τ₁ τ₂ τ₃ τ₄ τ₅ τ₆ : typ} →
+             pframe[ var , τ₁ cps[ τ₂ , τ₃ ]] τ₄ cps[ τ₅ , τ₆ ] →
+             term[ var ] τ₁ cps[ τ₂ , τ₃ ] →
+             term[ var ] τ₄ cps[ τ₅ , τ₆ ]
+pframe-plug (App₁ e₂) e₁ = NonVal (App e₁ e₂)
+pframe-plug (App₂ v₁) e₂ = NonVal (App (Val v₁) e₂)
+pframe-plug (Let e₂)  e₁ = NonVal (Let e₁ e₂)
 
-data same-pframe {var : typ → Set} {τ₁ τ₃ τ₅ τ₆ : typ} :
-                 {τ τ₇ : typ} →
-       pframe[ var , τ cps[ τ₅ , τ₆ ]] τ₁ cps[ τ₃ , τ₆ ] →
-       pframe[ var , τ cps[ τ₅ , τ₇ ]] τ₁ cps[ τ₃ , τ₇ ] →
+data same-pframe {var : typ → Set} :
+                 {τ₁ τ₁' τ₂ τ₂' τ₃ τ₃' τ₄ τ₄' τ₅ τ₅' τ₆ τ₆' : typ} →
+       pframe[ var , τ₁ cps[ τ₂ , τ₃ ]] τ₄ cps[ τ₅ , τ₆ ] →
+       pframe[ var , τ₁' cps[ τ₂' , τ₃' ]] τ₄' cps[ τ₅' , τ₆' ] →
        Set where
-  App₁ : {τ₂ τ₄ τ₆ : typ} →
-         (e₂ : term[ var ] τ₂ cps[ τ₄ , τ₅ ]) →
-         same-pframe (App₁ e₂)
-                     (App₁ {τ₆ = τ₆} e₂)
-  App₂ : {τ₂ τ₆ : typ} →
-         (v₁ : value[ var ] (τ₂ ⇒ τ₁ cps[ τ₃ , τ₅ ]) cps[τ,τ]) →
-         same-pframe (App₂ v₁)
-                     (App₂ {τ₅ = τ₆} v₁)
-  Let  : {τ α β : typ} →
-         (e₂ : var τ → term[ var ] τ₁ cps[ τ₃ , τ₅ ]) →
-         same-pframe (Let e₂)
-                     (Let {γ = τ₆} e₂)
+  App₁ : {τ₇ τ₈ τ₉ τ₃ τ₃' τ₄ τ₄' τ₅ τ₅' : typ} →
+         (e₂ : term[ var ] τ₇ cps[ τ₈ , τ₉ ]) →
+         same-pframe {τ₃ = τ₃}{τ₃'}{τ₄}{τ₄'}{τ₅}{τ₅'}
+                     (App₁ e₂) (App₁ e₂)
+  App₂ : {τ₇ τ₈ τ₉ τ₁₀ τ₃ τ₃' : typ} →
+         (v₁ : value[ var ] (τ₈ ⇒ τ₇ cps[ τ₉ , τ₁₀ ]) cps[τ,τ]) →
+         same-pframe {τ₃ = τ₃}{τ₃'}
+                     (App₂ v₁) (App₂ v₁)
+  Let  : {τ₇ τ₈ τ₉ τ₁₀ τ₃ τ₃' : typ} →
+         (e₂ : var τ₈ → term[ var ] τ₇ cps[ τ₉ , τ₁₀ ]) →
+         same-pframe {τ₃ = τ₃}{τ₃'}
+                     (Let e₂) (Let e₂)
 
 -- pure context : for RShift
 data pcontext[_,_cps[_,_]]_cps[_,_] (var : typ → Set)
      : typ → typ → typ → typ → typ → typ → Set where
   Hole  : {τ₁ τ₂ τ₃ : typ} →
           pcontext[ var , τ₁ cps[ τ₂ , τ₃ ]] τ₁ cps[ τ₂ , τ₃ ]
-  Frame : {τ₁ τ₂ τ₃ τ₄ τ₅ τ₆ τ₇ : typ} →
-          (f : pframe[ var , τ₄ cps[ τ₅ , τ₃ ]] τ₆
-                     cps[ τ₇ , τ₃ ]) →
+  Frame : {τ₁ τ₂ τ₃ τ₄ τ₅ τ₆ τ₇ τ₈ τ₉ : typ} →
+          (f : pframe[ var , τ₄ cps[ τ₅ , τ₆ ]] τ₇
+                     cps[ τ₈ , τ₉ ]) →
           (e : pcontext[ var , τ₁ cps[ τ₂ , τ₃ ]] τ₄
-                       cps[ τ₅ , τ₃ ]) →
-          pcontext[ var , τ₁ cps[ τ₂ , τ₃ ]] τ₆ cps[ τ₇ , τ₃ ]
+                       cps[ τ₅ , τ₆ ]) →
+          pcontext[ var , τ₁ cps[ τ₂ , τ₃ ]] τ₇ cps[ τ₈ , τ₉ ]
 
 pcontext-plug : {var : typ → Set}
-                ({τ₁} τ₂ {τ₃ τ₄ τ₅} : typ) →
-                pcontext[ var , τ₂ cps[ τ₄ , τ₅ ]] τ₁
-                        cps[ τ₃ , τ₅ ] →
-                term[ var ] τ₂ cps[ τ₄ , τ₅ ] →
-                term[ var ] τ₁ cps[ τ₃ , τ₅ ]
-pcontext-plug τ₂ Hole        e₁ = e₁
-pcontext-plug τ₂ (Frame f p) e₁ = pframe-plug f (pcontext-plug τ₂ p e₁)
+                {τ₁ τ₂ τ₃ τ₄ τ₅ τ₆ : typ} →
+                pcontext[ var , τ₁ cps[ τ₂ , τ₃ ]] τ₄
+                        cps[ τ₅ , τ₆ ] →
+                term[ var ] τ₁ cps[ τ₂ , τ₃ ] →
+                term[ var ] τ₄ cps[ τ₅ , τ₆ ]
+pcontext-plug Hole        e₁ = e₁
+pcontext-plug (Frame f p) e₁ = pframe-plug f (pcontext-plug p e₁)
 
-data same-pcontext {var : typ → Set} {τ₁ τ₂ τ₃ : typ} :
-                   {τ₄ τ₆ τ₇ τ₈ : typ} →
-       pcontext[ var , τ₁ cps[ τ₂ , τ₃ ]] τ₄ cps[ τ₇ , τ₃ ] →
-       pcontext[ var , τ₁ cps[ τ₂ , τ₂ ]] τ₆ cps[ τ₇ , τ₈ ] →
+data same-pcontext {var : typ → Set} :
+                   {τ₁ τ₁' τ₂ τ₂' τ₃ τ₃' τ₄ τ₄' τ₅ τ₅' τ₆ τ₆' : typ} →
+       pcontext[ var , τ₁ cps[ τ₂ , τ₃ ]] τ₄ cps[ τ₅ , τ₆ ] →
+       pcontext[ var , τ₁' cps[ τ₂' , τ₃' ]] τ₄' cps[ τ₅' , τ₆' ] →
        Set where
-  Hole  : same-pcontext Hole Hole
-  Frame : {τ₄ τ₅ τ₆ τ₇ : typ} →
-          {f₁ : pframe[ var , τ₄ cps[ τ₅ , τ₃ ]] τ₆
-                      cps[ τ₇ , τ₃ ]} →
-          {f₂ : pframe[ var , τ₄ cps[ τ₅ , τ₂ ]] τ₆
-                      cps[ τ₇ , τ₂ ]} →
+  Hole  : {τ₁ τ₁' τ₂ τ₂' τ₃ τ₃' : typ} →
+          same-pcontext {τ₁ = τ₁}{τ₁'}{τ₂}{τ₂'}{τ₃}{τ₃'}
+                        Hole Hole
+  Frame : {τ₁ τ₁' τ₂ τ₂' τ₃ τ₃' τ₄ τ₄' τ₅ τ₅' τ₆ τ₆' τ₇ τ₇' τ₈ τ₈' τ₉ τ₉' : typ} →
+          {f₁ : pframe[ var , τ₄ cps[ τ₅ , τ₆ ]] τ₇
+                      cps[ τ₈ , τ₉ ]} →
+          {f₂ : pframe[ var , τ₄' cps[ τ₅' , τ₆' ]] τ₇'
+                      cps[ τ₈' , τ₉' ]} →
           same-pframe f₁ f₂ →
           {p₁ : pcontext[ var , τ₁ cps[ τ₂ , τ₃ ]] τ₄
-                        cps[ τ₅ , τ₃ ]} →
-          {p₂ : pcontext[ var , τ₁ cps[ τ₂ , τ₂ ]] τ₄
-                        cps[ τ₅ , τ₂ ]} →
+                        cps[ τ₅ , τ₆ ]} →
+          {p₂ : pcontext[ var , τ₁' cps[ τ₂' , τ₃' ]] τ₄'
+                        cps[ τ₅' , τ₆' ]} →
           same-pcontext p₁ p₂ →
           same-pcontext (Frame f₁ p₁) (Frame f₂ p₂)
 
@@ -271,7 +259,7 @@ data Reduce {var : typ → Set} :
            {v₂ : value[ var ] τ cps[τ,τ]} →
            {e₁′ : term[ var ] τ₁ cps[ τ₂ , τ₃ ]} →
            Subst e₁ v₂ e₁′ →
-           Reduce (App (Val (Fun τ₁ τ e₁)) (Val v₂))
+           Reduce (NonVal (App (Val (Fun τ₁ τ e₁)) (Val v₂)))
                   e₁′
   RFrame : {τ₁ τ₂ τ₃ τ₄ τ₅ τ₆ : typ} →
            {e₁ : term[ var ] τ₁ cps[ τ₂ , τ₃ ]} →
@@ -285,10 +273,10 @@ data Reduce {var : typ → Set} :
            {e₂ : var τ₁ → term[ var ] τ₂ cps[ α , β ]} →
            {e₂′ : term[ var ] τ₂ cps[ α , β ]} →
            Subst e₂ v₁ e₂′ →
-           Reduce (Let (Val v₁) e₂) e₂′
+           Reduce (NonVal (Let (Val v₁) e₂)) e₂′
   RReset : {τ₁ τ₂ : typ} →
            {v₁ : value[ var ] τ₁ cps[τ,τ]} →
-           Reduce {τ₂ = τ₂} (Reset τ₁ τ₁ τ₂ (Val v₁)) (Val v₁)
+           Reduce {τ₂ = τ₂} (NonVal (Reset τ₁ τ₁ τ₂ (Val v₁))) (Val v₁)
   RShift : {τ τ₁ τ₂ τ₃ τ₄ τ₅ τ₆ : typ} →
            {v₂ : value[ var ] (τ₃ ⇒ τ₄ cps[ τ , τ ]) ⇒ τ₁ cps[ τ₁ , τ₂ ] cps[τ,τ]} →
            (p₁ : pcontext[ var , τ₃ cps[ τ₄ , τ₂ ]]
@@ -296,29 +284,11 @@ data Reduce {var : typ → Set} :
            (p₂ : pcontext[ var , τ₃ cps[ τ₄ , τ₄ ]]
                            τ₅ cps[ τ₅ , τ₄ ]) →
            same-pcontext p₁ p₂ →
-           Reduce (Reset τ₅ τ₂ τ₆
-                         (pcontext-plug τ₃ p₁ (App (Val Shift) (Val v₂))))
-                  (Reset τ₁ τ₂ τ₆
-                         (App (Val v₂)
-                              (Val (Fun τ₄ τ₃ (λ x →
-                                     let e = pcontext-plug τ₃ p₂ (Val (Var x)) in
-                                     Reset τ₅ τ₄ τ e)))))
-   
-  -- RShift : {τ₀ τ₁ τ₂ τ₃ τ₄ τ α  : typ} →
-  --          (p₁ : pcontext[ var , τ₀ cps[ τ , τ₂ ]]
-  --                          τ₄ cps[ τ₄ , τ₂ ]) →
-  --          (p₂ : pcontext[ var , τ₀ cps[ τ , τ ]]
-  --                          τ₄ cps[ τ₄ , τ ]) →
-  --          same-pcontext p₁ p₂ → 
-  --          (e₁ : var (τ₀ ⇒ τ cps[ α , α ]) →
-  --                term[ var ] τ₁ cps[ τ₁ , τ₂ ]) →
-  --          Reduce {τ₂ = τ₃}
-  --                 (Reset τ₄ τ₂ τ₃
-  --                   (pcontext-plug τ₀ p₁ (Shift α τ₁ τ₂ τ₀ τ e₁)))
-  --                 (Reset τ₁ τ₂ τ₃
-  --                   (App (Val (Fun τ₁ (τ₀ ⇒ τ cps[ α , α ]) e₁))
-  --                        (Val (Fun τ τ₀ (λ x →
-  --                               let e = pcontext-plug {τ₁ = τ₄} τ₀
-  --                                                     p₂
-  --                                                     (Val (Var x))
-  --                               in Reset τ₄ τ α e)))))
+           Reduce (NonVal (Reset τ₅ τ₂ τ₆
+                                 (pcontext-plug p₁ (NonVal (App (Val Shift) (Val v₂))))))
+                  (NonVal (Reset τ₁ τ₂ τ₆
+                          (NonVal
+                            (App (Val v₂)
+                                 (Val (Fun τ₄ τ₃ (λ x →
+                                     let e = pcontext-plug p₂ (Val (Var x)) in
+                                     NonVal (Reset τ₅ τ₄ τ e))))))))

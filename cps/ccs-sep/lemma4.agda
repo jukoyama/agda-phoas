@@ -1,6 +1,6 @@
 module lemma4 where
 
-open import DSterm3
+open import DSterm
 open import CPSterm
 open import lemma1
 open import lemma2
