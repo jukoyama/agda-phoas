@@ -82,7 +82,8 @@ mutual
                       (λ n → CPSApp (CPSApp (CPSVal m) (CPSVal n))
                                      (CPSVal (CPSFun (λ a → κ (CPSVar a))))))
                                      -- λκ.(@κ (@ [M] (λm.m)))
-  cpsI τ₁ τ₂ .τ₂ (NonVal (Reset τ₃ .τ₁ .τ₂ e₁)) κ = CPSLet (cpsI τ₃ τ₃ τ₁ e₁ (λ m → CPSVal m)) (λ v → κ (CPSVar v))
+  cpsI τ₁ τ₂ .τ₂ (NonVal (Reset τ₃ .τ₁ .τ₂ e₁)) κ =
+    CPSLet (cpsI τ₃ τ₃ τ₁ e₁ (λ m → CPSVal m)) (λ v → κ (CPSVar v))
   cpsI τ₁ τ₂ τ₃  (NonVal (Let {τ₁ = τ₄} {τ₂ = .τ₁} {α = .τ₂} {β = β} {γ = .τ₃} e₁ e₂)) κ =
     cpsI τ₄ β τ₃ e₁
          (λ n → CPSLet (CPSVal n) (λ x′ → cpsI τ₁ τ₂ β (e₂ x′) κ))
@@ -110,11 +111,14 @@ cpsImain τ₁ τ₂ τ₃ e = CPSVal (CPSFun (λ k → cpsI′ τ₁ τ₂ τ�
 -- cpsframe
 data cpsframe[_,_] (var : cpstyp → Set) : cpstyp → cpstyp → Set where
   CPSApp₁ : {τ₁ τ₂ : cpstyp} →
-         (e₂ : cpsterm[ var ] τ₂) →
-         cpsframe[ var , τ₂ ⇒ τ₁ ] τ₁
+            (e₂ : cpsterm[ var ] τ₂) →
+            cpsframe[ var , τ₂ ⇒ τ₁ ] τ₁
   CPSApp₂ : {τ₁ τ₂ : cpstyp} →
-         (v₁ : cpsvalue[ var ] (τ₂ ⇒ τ₁)) →
-         cpsframe[ var , τ₂ ] τ₁
+            (v₁ : cpsvalue[ var ] (τ₂ ⇒ τ₁)) →
+            cpsframe[ var , τ₂ ] τ₁
+  CPSLet  : {τ₁ τ₂ : cpstyp} →
+            (e₂ : var τ₁ → cpsterm[ var ] τ₂) → 
+            cpsframe[ var , τ₁ ] τ₂
 
 cpsframe-plug : {var : cpstyp → Set} → {τ₁ τ₂ : cpstyp} →
              cpsframe[ var , τ₂ ] τ₁ →
@@ -122,6 +126,7 @@ cpsframe-plug : {var : cpstyp → Set} → {τ₁ τ₂ : cpstyp} →
              cpsterm[ var ] τ₁
 cpsframe-plug (CPSApp₁ e₂) e₁ = CPSApp e₁ e₂
 cpsframe-plug (CPSApp₂ v₁) e₂ = CPSApp (CPSVal v₁) e₂
+cpsframe-plug (CPSLet  e₂) e₁ = CPSLet e₁ e₂
 
 -- cpscontext
 data cpscontext[_,_] (var : cpstyp → Set) : cpstyp → cpstyp → Set where
@@ -193,23 +198,38 @@ mutual
                 cpsterm[ var ] τ₁ →
                 cpsterm[ var ] τ₁ → Set where
        eqBeta   : {τ₁ τ₂ : cpstyp} →
-             {e₁ : var τ₂ → cpsterm[ var ] τ₁} →
-             {v : cpsvalue[ var ] τ₂} →
-             {e₂ : cpsterm[ var ] τ₁} →
-             cpsSubst e₁ v e₂ →
-             cpsequal (CPSApp (CPSVal (CPSFun e₁)) (CPSVal v)) e₂
+                  {e₁ : var τ₂ → cpsterm[ var ] τ₁} →
+                  {v : cpsvalue[ var ] τ₂} →
+                  {e₂ : cpsterm[ var ] τ₁} →
+                  cpsSubst e₁ v e₂ →
+                  cpsequal (CPSApp (CPSVal (CPSFun e₁)) (CPSVal v)) e₂
        eqLet    : {τ₁ τ₂ : cpstyp} →
-             {v₁ : cpsvalue[ var ] τ₁} →
-             {e₂ : var τ₁ → cpsterm[ var ] τ₂} →
-             {e₂′ : cpsterm[ var ] τ₂} →
-             cpsSubst e₂ v₁ e₂′ →
-             cpsequal (CPSLet (CPSVal v₁) e₂) e₂′
+                  {v₁ : cpsvalue[ var ] τ₁} →
+                  {e₂ : var τ₁ → cpsterm[ var ] τ₂} →
+                  {e₂′ : cpsterm[ var ] τ₂} →
+                  cpsSubst e₂ v₁ e₂′ →
+                  cpsequal (CPSLet (CPSVal v₁) e₂) e₂′
+       eqShift : {τ₁ τ₂ τ₃ τ₄ τ₅ : cpstyp} →
+                  {v : cpsvalue[ var ] ((τ₁ ⇒ ((τ₂ ⇒ τ₃) ⇒ τ₃)) ⇒ ((τ₄ ⇒ τ₄) ⇒ τ₅))} →
+                  {k : cpsvalue[ var ] (τ₁ ⇒ τ₂)} →
+                  cpsequal (CPSApp (CPSApp
+                                   (CPSVal (CPSFun (λ w → CPSVal (CPSFun (λ k₁ →
+                                     CPSApp (CPSApp (CPSVal (CPSVar w))
+                                                    (CPSVal (CPSFun (λ a → CPSVal (CPSFun (λ k′ →
+                                                      CPSApp (CPSVal (CPSVar k′))
+                                                             (CPSApp (CPSVal (CPSVar k₁)) (CPSVal (CPSVar a)))))))))
+                                            (CPSVal (CPSFun (λ m → CPSVal (CPSVar m)))))))))
+                                   (CPSVal v)) (CPSVal k))
+                           (CPSApp (CPSApp (CPSVal v) (CPSVal (CPSFun
+                                      (λ a → CPSVal (CPSFun λ k′ →
+                                        CPSApp (CPSVal (CPSVar k′)) (CPSApp (CPSVal k) (CPSVal (CPSVar a))))))))
+                                   (CPSVal (CPSFun (λ m → CPSVal (CPSVar m)))))
        eqOmega  : {τ₁ τ₂ : cpstyp} →
-             {con : cpscontext[ var , τ₂ ] τ₁} →
-             {e₁ : cpsterm[ var ] τ₂} →
-             cpsequal (CPSApp (CPSVal (CPSFun (λ x →
-                         cpscontext-plug con (CPSVal (CPSVar x))))) e₁)
-                                         (cpscontext-plug con e₁)
+                  {con : cpscontext[ var , τ₂ ] τ₁} →
+                  {e₁ : cpsterm[ var ] τ₂} →
+                  cpsequal (CPSApp (CPSVal (CPSFun (λ x →
+                                   cpscontext-plug con (CPSVal (CPSVar x))))) e₁)
+                                                       (cpscontext-plug con e₁)
        eqApp₁   : {τ₁ τ₂ : cpstyp} →
              {e₁ : cpsterm[ var ] (τ₂ ⇒ τ₁)} →
              {e₁′ : cpsterm[ var ] (τ₂ ⇒ τ₁)} →
@@ -245,16 +265,15 @@ mutual
              cpsequal (CPSApp (CPSLet e₁ (λ x → e₂ x)) e₃)
                               (CPSLet e₁ (λ x → CPSApp (e₂ x) e₃))
        eqLetApp : {τ₁ τ₂ : cpstyp} →
-             {v₁ : cpsvalue[ var ] τ₁} →
-             {e₁ : var τ₁ → cpsterm[ var ] τ₂} →
-             cpsequal (CPSLet (CPSVal v₁) (λ x → e₁ x))
-                              (CPSApp (CPSVal (CPSFun (λ x → e₁ x))) (CPSVal v₁))
+                  {v₁ : cpsvalue[ var ] τ₁} →
+                  {e₁ : var τ₁ → cpsterm[ var ] τ₂} →
+                  cpsequal (CPSLet (CPSVal v₁) (λ x → e₁ x))
+                                   (CPSApp (CPSVal (CPSFun (λ x → e₁ x))) (CPSVal v₁))
        eqLetApp₂ : {τ₁ τ₂ : cpstyp} →
-                 -- {v₁ : cpsvalue[ var ] τ₁} →
-              {e₁′ : cpsterm[ var ] τ₁} →
-              {e₁ : var τ₁ → cpsterm[ var ] τ₂} →
-              cpsequal (CPSLet e₁′ (λ x → e₁ x))
-                       (CPSApp (CPSVal (CPSFun (λ x → e₁ x))) e₁′)                      
+                   {v₁ : cpsvalue[ var ] (τ₁ ⇒ τ₂)} →
+                   {e₂ : cpsterm[ var ] τ₁} →
+                   cpsequal (CPSApp (CPSVal v₁) e₂)
+                            (CPSLet e₂ (λ x → CPSApp (CPSVal v₁) (CPSVal (CPSVar x))))
        eqId     : {τ₁ : cpstyp} →
              {e : cpsterm[ var ] τ₁} →
              cpsequal e e

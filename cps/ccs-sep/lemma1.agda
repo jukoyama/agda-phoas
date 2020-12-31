@@ -23,6 +23,7 @@ eqsubst-cont : {var : cpstyp → Set} {τ₁ τ₂ : typ} {τ₄ : cpstyp} →
                (v : cpsvalue[ var ] τ₄) → Set 
 eqsubst-cont {var} {τ₁} {τ₂} {τ₄} κ v =
   {v′ : cpsvalue[ var ] (cpsT τ₁)} →
+  cpsSubstVal (λ y → v′) v v′ →
   cpsSubst (λ y → κ v′) v (κ v′)
 
 mutual
@@ -94,8 +95,10 @@ mutual
   ekSubst′ k (sApp sub₁ sub₂)  = eκSubst sub₁
                                         (λ m → eκSubst sub₂
                                         (λ n → sApp (sApp (sVal m) (sVal n)) (sVal sVar≠)))
-  ekSubst′ k (sReset sub) = sLet (λ c → sApp (sVal sVar≠) (sVal sVar≠))
-                                 (λ c → eκSubst sub (λ m → sVal m))
+  ekSubst′ k (sReset sub) =
+    -- sApp Subst≠ (eκSubst sub (λ m → sVal m))
+    sLet (λ c → sApp (sVal sVar≠) (sVal sVar≠))
+         (λ c → eκSubst sub (λ m → sVal m))
   ekSubst′ k (sLet sub₂ sub₁) = eκSubst sub₁
                                  (λ m → sLet (λ c → ekSubst′ k (sub₂ c))
                                  (λ c → sVal m))
@@ -107,6 +110,7 @@ eSubst : {var : cpstyp → Set} {τ₁ τ₂ τ₃ τ : typ} →
          {v : value[ var ∘ cpsT ] τ cps[τ,τ]} →
          {κ : cpsvalue[ var ] (cpsT τ₁) → cpsterm[ var ] (cpsT τ₂)} →
          Subst e₁ v e₂ →
+         -- eqsubst-cont (λ x → κ x) (cpsV τ v) → 
          subst-cont (λ x → κ) (cpsV τ v) κ →
          cpsSubst (λ x → cpsI τ₁ τ₂ τ₃ {var = var} (e₁ x) κ)
                   (cpsV τ v)
@@ -180,7 +184,9 @@ kSubst′ {τ₁ = τ₁} {τ₂} {τ₃} (NonVal (App {τ₁ = .τ₁} {τ₂ =
                      cpsI τ₄ τ₅ τ₆ e₂
                      (λ n → CPSApp (CPSApp (CPSVal m) (CPSVal n)) (CPSVal v'))) λ v₁ → 
   κSubst e₂ (λ v' → (λ n → CPSApp (CPSApp (CPSVal v₁) (CPSVal n)) (CPSVal v'))) λ v₂ → sApp Subst≠ (sVal sVar=)
-kSubst′(NonVal (Reset τ₁ τ₂ τ₃ e)) = sLet (λ k' → sApp (sVal sVar=) Subst≠) (λ m → Subst≠)
+kSubst′(NonVal (Reset τ₁ τ₂ τ₃ e)) =
+  -- sApp (sVal sVar=) Subst≠
+  sLet (λ k' → sApp (sVal sVar=) Subst≠) (λ m → Subst≠)
 kSubst′ {τ₁ = τ₁} {τ₂} {τ₃} (NonVal (Let {τ₁ = τ₄} {τ₂ = .τ₁} {α = .τ₂} {β = β} {γ = .τ₃} e₁ e₂)) =
   κSubst e₁ (λ v' → λ n →
     CPSLet (CPSVal n) (λ c → cpsI′ τ₁ τ₂ β (e₂ c) v')) λ v₁ →

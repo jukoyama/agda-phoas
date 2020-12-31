@@ -1,4 +1,4 @@
-module DSterm3 where
+module DSterm where
 
 open import Data.Unit
 open import Data.Empty
