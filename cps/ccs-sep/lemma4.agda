@@ -7,6 +7,7 @@ open import lemma2
 
 open import Function
 open import Relation.Binary.PropositionalEquality
+open import Data.Product
 
 contextContE : {var : cpstyp → Set} → {τ₁ τ₂ τ₃ τ₄ τ₅ α β γ : typ} →
                (v : value[ (λ x → var (cpsT x)) ] (τ₁ ⇒ τ₂ cps[ α , α ]) ⇒ β cps[ β , τ₃ ] cps[τ,τ]) →
@@ -180,3 +181,126 @@ contextContE {var} {τ₁} {τ₂} {τ₃} {τ₄} {τ₅} {α} {β} {γ} v κ
   ∎
   where open ≡-Reasoning
 
+contextContE₂ : {var : cpstyp → Set} → {τ₁ τ₂ τ₃ τ₄ τ₅ α β γ : typ} →
+                (v : value[ var ∘ cpsT ] τ₁ cps[τ,τ]) →
+                (κ : cpsvalue[ var ] (cpsT τ₁) → cpsterm[ var ] (cpsT τ₃)) →
+                (con : pcontext[ var ∘ cpsT , τ₁ cps[ τ₂ , τ₂ ]] τ₁ cps[ τ₃ , τ₃ ]) →
+                schematic κ →
+                (cpsI τ₁ τ₃ τ₃ (pcontext-plug con (Val v)) κ)
+                ≡
+                cpsI τ₁ τ₃ τ₃ (Val v) κ
+contextContE₂ = {!!}
+
+
+contextContE₃ : {var : cpstyp → Set} → {τ₁ τ₂ τ₃ α β : typ} →
+                (e : term[ var ∘ cpsT ] τ₁ cps[ τ₂ , τ₃ ]) →
+                (κ : cpsvalue[ var ] (cpsT α) → cpsterm[ var ] (cpsT β)) →
+                (con : pcontext[ var ∘ cpsT , τ₁ cps[ τ₂ , τ₃ ]] α cps[ β , τ₃ ]) →
+                schematic κ →
+                ∃[ κ′ ] (cpsI α β τ₃ (pcontext-plug con e) κ ≡ cpsI τ₁ τ₂ τ₃ e κ′)
+                
+contextContE₃ {var} {τ₁} {τ₂} {τ₃} {.τ₁} {.τ₂} e κ (Hole {τ₁ = .τ₁} {τ₂ = .τ₂} {τ₃ = .τ₃}) sche = κ , refl
+
+
+contextContE₃ {var} {τ₁} {τ₂} {τ₃} {α} {β} e κ
+              (Frame {τ₁ = .τ₁} {τ₂ = .τ₂} {τ₃ = .τ₃} {τ₄ = .(τ₆ ⇒ α cps[ β , τ₈ ])}
+                     {τ₅ = τ₇} {τ₆ = .τ₃} {τ₇ = .α} {τ₈ = .β} {τ₉ = .τ₃}
+                     (App₁ {τ₁ = .α} {τ₂ = τ₆} {τ₃ = .β} {τ₄ = τ₈} {τ₅ = .τ₇} {τ₆ = .τ₃} e₂) con) sche =
+  proj₁
+    (contextContE₃ e
+     (λ m → cpsI τ₆ τ₈ τ₇ e₂
+     (λ n → CPSApp (CPSApp (CPSVal m) (CPSVal n))
+                    (CPSVal (CPSFun (λ a → κ (CPSVar a))))))
+     con
+     (λ v →
+        κSubst e₂
+        (λ m n →
+           CPSApp (CPSApp (CPSVal m) (CPSVal n))
+           (CPSVal (CPSFun (λ a → κ (CPSVar a)))))
+        (λ x →
+           sApp (sApp (sVal sVar=) (sVal SubstV≠))
+           (sVal (sFun (λ x₁ → Subst≠)))))) ,
+  (begin
+    cpsI α β τ₃ (pcontext-plug (Frame (App₁ e₂) con) e) κ
+  ≡⟨ refl ⟩
+    cpsI (τ₆ ⇒ α cps[ β , τ₈ ]) τ₇ τ₃ (pcontext-plug con e)
+      (λ m → cpsI τ₆ τ₈ τ₇ e₂
+      (λ n → CPSApp
+                (CPSApp (CPSVal m) (CPSVal n))
+                (CPSVal (CPSFun (λ a → κ (CPSVar a))))))
+  ≡⟨ proj₂ (contextContE₃ e (λ m → cpsI τ₆ τ₈ τ₇ e₂
+                            (λ n → CPSApp (CPSApp (CPSVal m) (CPSVal n))
+                                           (CPSVal (CPSFun (λ a → κ (CPSVar a)))))) con
+                            λ v → κSubst e₂ (λ m n → CPSApp (CPSApp (CPSVal m) (CPSVal n))
+                                                              (CPSVal (CPSFun (λ a → κ (CPSVar a)))))
+                                          λ x → sApp (sApp (sVal sVar=) Subst≠) Subst≠) ⟩
+    cpsI τ₁ τ₂ τ₃ e
+      (proj₁ (contextContE₃ e (λ m → cpsI τ₆ τ₈ τ₇ e₂
+                              (λ n → CPSApp (CPSApp (CPSVal m) (CPSVal n))
+                                             (CPSVal (CPSFun (λ a → κ (CPSVar a))))))
+                            con
+                            (λ v → κSubst e₂ (λ m n → CPSApp (CPSApp (CPSVal m) (CPSVal n))
+                                                               (CPSVal (CPSFun (λ a → κ (CPSVar a)))))
+                                           (λ x → sApp (sApp (sVal sVar=) (sVal SubstV≠)) (sVal (sFun (λ x₁ → Subst≠)))))))
+  ∎
+  )
+  where open ≡-Reasoning
+
+
+contextContE₃ {var} {τ₁} {τ₂} {τ₃} {α} {β} e κ
+              (Frame {τ₁ = .τ₁} {τ₂ = .τ₂} {τ₃ = .τ₃} {τ₄ = τ₆} {τ₅ = τ₇}
+                     {τ₆ = .τ₃} {τ₇ = .α} {τ₈ = .β} {τ₉ = .τ₃}
+                     (App₂ {τ₁ = .α} {τ₂ = .τ₆} {τ₃ = .β} {τ₄ = .τ₇} {τ₅ = .τ₃} v₁) con) sche =
+  proj₁
+    (contextContE₃ e
+     (λ n →
+        CPSApp
+        (CPSApp (CPSVal (cpsV (τ₆ ⇒ α cps[ β , τ₇ ]) v₁)) (CPSVal n))
+        (CPSVal (CPSFun (λ a → κ (CPSVar a)))))
+     con (λ v → sApp (sApp Subst≠ (sVal sVar=)) Subst≠)) ,
+  (begin
+    cpsI α β τ₃ (pcontext-plug (Frame (App₂ v₁) con) e) κ
+  ≡⟨ refl ⟩
+    cpsI τ₆ τ₇ τ₃ (pcontext-plug con e)
+      (λ n →
+         CPSApp
+         (CPSApp (CPSVal (cpsV (τ₆ ⇒ α cps[ β , τ₇ ]) v₁)) (CPSVal n))
+         (CPSVal (CPSFun (λ a → κ (CPSVar a)))))
+  ≡⟨ proj₂ (contextContE₃ e (λ n →
+                                 CPSApp
+                                 (CPSApp (CPSVal (cpsV (τ₆ ⇒ α cps[ β , τ₇ ]) v₁)) (CPSVal n))
+                                 (CPSVal (CPSFun (λ a → κ (CPSVar a))))) con
+                            λ v → sApp (sApp Subst≠ (sVal sVar=)) Subst≠) ⟩
+    cpsI τ₁ τ₂ τ₃ e
+      (proj₁ (contextContE₃ e
+             (λ n →
+               CPSApp
+                 (CPSApp (CPSVal (cpsV (τ₆ ⇒ α cps[ β , τ₇ ]) v₁)) (CPSVal n))
+                 (CPSVal (CPSFun (λ a → κ (CPSVar a)))))
+             con (λ v → sApp (sApp Subst≠ (sVal sVar=)) Subst≠)))
+  ∎)
+  where open ≡-Reasoning
+
+
+contextContE₃ {var} {τ₁} {τ₂} {τ₃} {α} {β} e κ
+              (Frame {τ₁ = .τ₁} {τ₂ = .τ₂} {τ₃ = .τ₃} {τ₄ = τ₆}
+                     {τ₅ = τ₇} {τ₆ = .τ₃} {τ₇ = .α} {τ₈ = .β} {τ₉ = .τ₃}
+                     (Let {τ₁ = .τ₆} {τ₂ = .α} {α = .β} {β = .τ₇} {γ = .τ₃} e₂) con) sche =
+  proj₁
+    (contextContE₃ e
+     (λ n → CPSLet (CPSVal n) (λ x′ → cpsI α β τ₇ (e₂ x′) κ)) con
+     (λ v → sLet (λ x → Subst≠) (λ x → sVal sVar=))) ,
+  (begin
+    cpsI α β τ₃ (pcontext-plug (Frame (Let e₂) con) e) κ
+  ≡⟨ refl ⟩
+    cpsI τ₆ τ₇ τ₃ (pcontext-plug con e)
+         (λ n → CPSLet (CPSVal n) (λ x′ → cpsI α β τ₇ (e₂ x′) κ))
+  ≡⟨ proj₂ (contextContE₃ e (λ n → CPSLet (CPSVal n) (λ x′ → cpsI α β τ₇ (e₂ x′) κ)) con
+                          λ v → sLet (λ x → Subst≠) λ x → sVal sVar=) ⟩
+    cpsI τ₁ τ₂ τ₃ e
+      (proj₁
+       (contextContE₃ e
+        (λ n → CPSLet (CPSVal n) (λ x′ → cpsI α β τ₇ (e₂ x′) κ)) con
+        (λ v → sLet (λ x → Subst≠) (λ x → sVal sVar=))))
+  ∎)
+  where open ≡-Reasoning
