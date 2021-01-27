@@ -83,10 +83,13 @@ mutual
                                      (CPSVal (CPSFun (λ a → κ (CPSVar a))))))
                                      -- λκ.(@κ (@ [M] (λm.m)))
   cpsI τ₁ τ₂ .τ₂ (NonVal (Reset τ₃ .τ₁ .τ₂ e₁)) κ =
-    CPSLet (cpsI τ₃ τ₃ τ₁ e₁ (λ m → CPSVal m)) (λ v → κ (CPSVar v))
+    CPSApp (CPSVal (CPSFun (λ x → κ (CPSVar x)))) (cpsI τ₃ τ₃ τ₁ e₁ (λ m → CPSVal m))
+    -- CPSLet (cpsI τ₃ τ₃ τ₁ e₁ (λ m → CPSVal m)) (λ v → κ (CPSVar v))
   cpsI τ₁ τ₂ τ₃  (NonVal (Let {τ₁ = τ₄} {τ₂ = .τ₁} {α = .τ₂} {β = β} {γ = .τ₃} e₁ e₂)) κ =
+    -- cpsI τ₄ β τ₃ e₁
+    --      (λ n → CPSLet (CPSVal n) (λ x′ → cpsI τ₁ τ₂ β (e₂ x′) κ))
     cpsI τ₄ β τ₃ e₁
-         (λ n → CPSLet (CPSVal n) (λ x′ → cpsI τ₁ τ₂ β (e₂ x′) κ))
+         (λ m → CPSApp (CPSVal (CPSFun (λ c → cpsI τ₁ τ₂ β (e₂ c) κ))) (CPSVal m))
 
   cpsI′ : (τ₁ τ₂ τ₃ : typ) → {var : cpstyp → Set} →
           term[ var ∘ cpsT ] τ₁ cps[ τ₂ , τ₃ ] →
@@ -97,11 +100,13 @@ mutual
     cpsI (τ₄ ⇒ τ₁ cps[ τ₂ , τ₅ ]) τ₆ τ₃
          e₁ (λ m → cpsI τ₄ τ₅ τ₆ e₂ (λ n → CPSApp (CPSApp (CPSVal m) (CPSVal n)) (CPSVal k)))
   cpsI′ τ₁ τ₂ .τ₂ (NonVal (Reset τ₃ .τ₁ .τ₂ e₁)) k =
-    -- CPSApp (CPSVal k) (cpsI τ₃ τ₃ τ₁ e₁ (λ m → CPSVal m)) 
-    CPSLet (cpsI τ₃ τ₃ τ₁ e₁ (λ m → CPSVal m)) (λ a → CPSApp (CPSVal k) (CPSVal (CPSVar a)))
+    CPSApp (CPSVal k) (cpsI τ₃ τ₃ τ₁ e₁ (λ m → CPSVal m)) 
+    -- CPSLet (cpsI τ₃ τ₃ τ₁ e₁ (λ m → CPSVal m)) (λ a → CPSApp (CPSVal k) (CPSVal (CPSVar a)))
   cpsI′ τ₁ τ₂ τ₃ {var} (NonVal (Let {τ₁ = τ₄} {τ₂ = .τ₁} {α = .τ₂} {β = β} {γ = .τ₃} e₁ e₂)) k =
+    -- cpsI τ₄ β τ₃ e₁
+    --   (λ n → CPSLet (CPSVal n) (λ x′ → cpsI′ τ₁ τ₂ β (e₂ x′) k))
     cpsI τ₄ β τ₃ e₁
-      (λ n → CPSLet (CPSVal n) (λ x′ → cpsI′ τ₁ τ₂ β (e₂ x′) k))
+         (λ m → CPSApp (CPSVal (CPSFun (λ c → cpsI′ τ₁ τ₂ β (e₂ c) k))) (CPSVal m))
   
 cpsImain : (τ₁ τ₂ τ₃ : typ) → {var : cpstyp → Set} →
        term[ var ∘ cpsT ] τ₁ cps[ τ₂ , τ₃ ] →
@@ -116,9 +121,6 @@ data cpsframe[_,_] (var : cpstyp → Set) : cpstyp → cpstyp → Set where
   CPSApp₂ : {τ₁ τ₂ : cpstyp} →
             (v₁ : cpsvalue[ var ] (τ₂ ⇒ τ₁)) →
             cpsframe[ var , τ₂ ] τ₁
-  CPSLet  : {τ₁ τ₂ : cpstyp} →
-            (e₂ : var τ₁ → cpsterm[ var ] τ₂) → 
-            cpsframe[ var , τ₁ ] τ₂
 
 cpsframe-plug : {var : cpstyp → Set} → {τ₁ τ₂ : cpstyp} →
              cpsframe[ var , τ₂ ] τ₁ →
@@ -126,7 +128,6 @@ cpsframe-plug : {var : cpstyp → Set} → {τ₁ τ₂ : cpstyp} →
              cpsterm[ var ] τ₁
 cpsframe-plug (CPSApp₁ e₂) e₁ = CPSApp e₁ e₂
 cpsframe-plug (CPSApp₂ v₁) e₂ = CPSApp (CPSVal v₁) e₂
-cpsframe-plug (CPSLet  e₂) e₁ = CPSLet e₁ e₂
 
 -- cpscontext
 data cpscontext[_,_] (var : cpstyp → Set) : cpstyp → cpstyp → Set where
@@ -264,16 +265,6 @@ mutual
              {e₃ : cpsterm[ var ] τ₂} →
              cpsequal (CPSApp (CPSLet e₁ (λ x → e₂ x)) e₃)
                               (CPSLet e₁ (λ x → CPSApp (e₂ x) e₃))
-       eqLetApp : {τ₁ τ₂ : cpstyp} →
-                  {v₁ : cpsvalue[ var ] τ₁} →
-                  {e₁ : var τ₁ → cpsterm[ var ] τ₂} →
-                  cpsequal (CPSLet (CPSVal v₁) (λ x → e₁ x))
-                                   (CPSApp (CPSVal (CPSFun (λ x → e₁ x))) (CPSVal v₁))
-       eqLetApp₂ : {τ₁ τ₂ : cpstyp} →
-                   {v₁ : cpsvalue[ var ] (τ₁ ⇒ τ₂)} →
-                   {e₂ : cpsterm[ var ] τ₁} →
-                   cpsequal (CPSApp (CPSVal v₁) e₂)
-                            (CPSLet e₂ (λ x → CPSApp (CPSVal v₁) (CPSVal (CPSVar x))))
        eqId     : {τ₁ : cpstyp} →
              {e : cpsterm[ var ] τ₁} →
              cpsequal e e
@@ -287,110 +278,4 @@ mutual
              cpsequal e₂ e₁ →
              cpsequal e₂ e₃ →
              cpsequal e₁ e₃
-       eqRefl  : {τ₁ : cpstyp} →
-             (e₁ e₂ : cpsterm[ var ] τ₁) →
-             cpsRefl e₁ e₂ → 
-             cpsequal e₁ e₂
 
-  data cpsRefl {var : cpstyp → Set} :
-               {τ : cpstyp} →
-               cpsterm[ var ] τ →
-               cpsterm[ var ] τ → Set where
-       Refl* : {τ₁ : cpstyp} →
-          {e₁ : cpsterm[ var ] τ₁} →
-          {e₂ : cpsterm[ var ] τ₁} →
-          cpsequal e₁ e₂ →
-          cpsequal e₂ e₁ →
-          -- cpsRefl ((cpsequal e₁ e₂) × (cpsequal e₂ e₁))
-          cpsRefl e₁ e₂
-       Trans*  : {τ₁ : cpstyp} →
-             (e₁ e₂ e₃ : cpsterm[ var ] τ₁) →
-             cpsRefl e₁ e₂ →
-             cpsRefl e₂ e₃ →
-             cpsRefl e₁ e₃
-       eqId     : {τ₁ : cpstyp} →
-             {e : cpsterm[ var ] τ₁} →
-             cpsRefl e e
-
-
-cpsprod : {var : cpstyp → Set} {τ : cpstyp} →
-          {e₁ e₂ : cpsterm[ var ] τ} →
-          cpsRefl e₁ e₂ → ((cpsequal e₁ e₂) × (cpsequal e₂ e₁))
-cpsprod {var} {τ} {e₁} {e₂} (Refl* {τ₁ = .τ} {e₁ = .e₁} {e₂ = .e₂} eq₁ eq₂) = eq₁ , eq₂
-cpsprod {var} {τ} {e₁} {e₂}
-        (Trans* {τ₁ = .τ} .e₁ e₃ .e₂ eq₁ eq₂) =
-        eqTrans e₁ e₃ e₂ (proj₁ (cpsprod eq₁)) (proj₁ (cpsprod eq₂)) ,
-        eqTrans e₂ e₃ e₁ (proj₂ (cpsprod eq₂)) (proj₂ (cpsprod eq₁))
-cpsprod {var} {τ} {e₁} {.e₁} (eqId {τ₁ = .τ} {e = .e₁}) = eqId , eqId
-
-data cpsEqual {var : cpstyp → Set} :
-              {τ : cpstyp} →
-             cpsterm[ var ] τ →
-             cpsterm[ var ] τ → Set where
-  Eq*   : {τ₁ : cpstyp} →
-          {e₁ : cpsterm[ var ] τ₁} →
-          {e₂ : cpsterm[ var ] τ₁} →
-          cpsequal e₁ e₂ →
-          cpsEqual e₁ e₂
-
--- infix  3 _∎
--- infixr 2 _⟶⟨_⟩_ _⟵⟨_⟩_ _⟷⟨_⟩_ _≡⟨_⟩_
--- infix  1 begin_
-
--- begin_ : {var : cpstyp → Set} {τ₁ : cpstyp} →
---          {e₁ e₂ : cpsterm[ var ] τ₁} →
---          cpsequal e₁ e₂ → cpsequal e₁ e₂
--- begin_ red = red
-
--- _⟶⟨_⟩_ : {var : cpstyp → Set} {τ₁ : cpstyp} →
---           (e₁ {e₂ e₃} : cpsterm[ var ] τ₁) →
---           cpsequal e₁ e₂ → cpsequal e₂ e₃ → cpsequal e₁ e₃
--- _⟶⟨_⟩_ e₁ {e₂} {e₃} e₁-eq-e₂ e₂-eq-e₃ = eqTrans e₁ e₂ e₃ e₁-eq-e₂ e₂-eq-e₃
-
--- _⟵⟨_⟩_ : {var : cpstyp → Set} {τ₁ : cpstyp} →
---           (e₁ {e₂ e₃} : cpsterm[ var ] τ₁) →
---           cpsequal e₂ e₁ → cpsequal e₂ e₃ → cpsequal e₁ e₃
--- _⟵⟨_⟩_ e₁ {e₂} {e₃} e₂-eq-e₁ e₂-eq-e₃ = eqTrans′ e₁ e₂ e₃ e₂-eq-e₁ e₂-eq-e₃
-
--- _⟷⟨_⟩_ : {var : cpstyp → Set} {τ₁ : cpstyp} →
---           (e₁ {e₂ e₃} : cpsterm[ var ] τ₁) →
---           cpsequal e₁ e₂ → cpsequal e₂ e₃ → cpsequal e₁ e₃
--- _⟷⟨_⟩_ e₁ {e₂} {e₃} e₁-eq-e₂ e₂-eq-e₃ = eqTrans e₁ e₂ e₃ e₁-eq-e₂ e₂-eq-e₃
-
--- _≡⟨_⟩_ : {var : cpstyp → Set} {τ₁ : cpstyp} →
---          (e₁ {e₂ e₃} : cpsterm[ var ] τ₁) → e₁ ≡ e₂ → cpsequal e₂ e₃ →
---            cpsequal e₁ e₃
--- _≡⟨_⟩_ e₁ {e₂} {e₃} refl e₂-eq-e₃ = e₂-eq-e₃
-
--- _≡₁⟨_⟩_ : {var : cpstyp → Set} {τ₁ : cpstyp} →
---          (e₁ {e₂ e₃} : cpsterm[ var ] τ₁) →
---          cpsRefl e₁ e₂ → cpsequal e₂ e₃ →
---          cpsequal e₁ e₃
--- _≡₁⟨_⟩_ e₁ {e₂} {e₃} e₁-refl-e₂ e₂-eq-e₃ = eqTrans e₁ e₂ e₃ (eqRefl e₁ e₂ e₁-refl-e₂) e₂-eq-e₃
-
--- _∎ : {var : cpstyp → Set} {τ₁ : cpstyp} →
---      (e : cpsterm[ var ] τ₁) → cpsequal e e
--- _∎ e = eqId
-
--- infix  3 _∎₂
--- infixr 2 _⟶₂⟨_⟩_ _≡₂⟨_⟩_
--- infix  1 begin₂_
-
--- begin₂_ : {var : cpstyp → Set} {τ₁ : cpstyp} →
---          {e₁ e₂ : cpsterm[ var ] τ₁} →
---          cpsRefl e₁ e₂ → cpsRefl e₁ e₂
--- begin₂_ red = red
-
--- _⟶₂⟨_⟩_ : {var : cpstyp → Set} {τ₁ : cpstyp} →
---           (e₁ {e₂ e₃} : cpsterm[ var ] τ₁) →
---           cpsRefl e₁ e₂ → cpsRefl e₂ e₃ → cpsRefl e₁ e₃
--- _⟶₂⟨_⟩_ e₁ {e₂} {e₃} e₁-refl-e₂ e₂-refl-e₃ = Trans* e₁ e₂ e₃ e₁-refl-e₂ e₂-refl-e₃
-
--- _≡₂⟨_⟩_ : {var : cpstyp → Set} {τ₁ : cpstyp} →
---          (e₁ {e₂ e₃} : cpsterm[ var ] τ₁) → e₁ ≡ e₂ → cpsRefl e₂ e₃ →
---            cpsRefl e₁ e₃
--- _≡₂⟨_⟩_ e₁ {e₂} {e₃} refl e₂-refl-e₃ = e₂-refl-e₃
-
--- _∎₂ : {var : cpstyp → Set} {τ₁ : cpstyp} →
---      (e : cpsterm[ var ] τ₁) → cpsRefl e e
--- _∎₂ e = eqId
