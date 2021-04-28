@@ -2,11 +2,11 @@ module CPSterm where
 
 open import DSterm
 
-open import Data.Unit
-open import Data.Empty
+-- open import Data.Unit
+-- open import Data.Empty
 open import Data.Nat
 open import Function
-open import Relation.Binary.PropositionalEquality
+-- open import Relation.Binary.PropositionalEquality
 
 -- target type
 data cpstyp : Set where
@@ -56,79 +56,7 @@ mutual
     CPSId   : {τ₁ : cpstyp} → (var τ₁ → cpsvalue𝑐[ var ] τ₁) → cpscont𝑐[ var ] (τ₁ ⇒ τ₁)
     CPSCont : {τ₁ τ₂ : cpstyp} → (var τ₁ → cpsterm𝑐[ var ] τ₂) →
               cpscont𝑐[ var ] (τ₁ ⇒ τ₂)
-
--- CPS transformation
-
-cpsT : typ → cpstyp
-cpsT Nat = Nat
-cpsT Boolean = Boolean
-cpsT (τ₂ ⇒ τ₁ cps[ τ₃ , τ₄ ]) =
-  cpsT τ₂ ⇒ ((cpsT τ₁ ⇒ cpsT τ₃) ⇒ cpsT τ₄)
-
--- CPS transformation to target term
-
-mutual
-  cpsV𝑐 : (τ₁ : typ) → {var : cpstyp → Set} →
-          value[ var ∘ cpsT ] τ₁ cps[τ,τ] →
-          cpsvalue𝑐[ var ] (cpsT τ₁)
-  cpsV𝑐 .Nat (Num n) = CPSNum n
-  cpsV𝑐 τ₁  (Var v) = CPSVar v
-  cpsV𝑐 .(τ₂ ⇒ τ₁ cps[ τ₃ , τ₄ ]) (Fun τ₁ τ₂ {τ₃ = τ₃} {τ₄ = τ₄} e) =
-    CPSFun (λ x → cpsEmain𝑐 τ₁ τ₃ τ₄ (e x))
-  cpsV𝑐 .(((τ₃ ⇒ τ₄ cps[ τ , τ ]) ⇒ τ₁ cps[ τ₁ , τ₂ ]) ⇒ τ₃ cps[ τ₄ , τ₂ ])
-        (Shift {τ = τ} {τ₁ = τ₁} {τ₂ = τ₂} {τ₃ = τ₃} {τ₄ = τ₄}) = CPSShift
-
-  -- M : K
-  cpsE𝑐 : (τ₁ τ₂ τ₃ : typ) → {var : cpstyp → Set} →
-          term[ var ∘ cpsT ] τ₁ cps[ τ₂ , τ₃ ] →
-          cpscont𝑐[ var ] (cpsT τ₁ ⇒ cpsT τ₂) →
-          -- (cpsvalue𝑐[ var ] (cpsT τ₁) → cpsterm𝑐[ var ] (cpsT τ₂)) → 
-          cpsterm𝑐[ var ] (cpsT τ₃)
-  -- V : K
-  cpsE𝑐 τ₁ τ₂ .τ₂ (Val v) κ = CPSRet κ (cpsV𝑐 τ₁ v)
-  -- (PQ) : K
-  cpsE𝑐 τ₁ τ₂ τ₃ (NonVal {τ₁ = .τ₁} {τ₂ = .τ₂} {τ₃ = .τ₃}
-        (App {τ₁ = .τ₁} {τ₂ = τ₄} {τ₃ = .τ₂} {τ₄ = τ₅} {τ₅ = τ₆} {τ₆ = .τ₃}
-        (NonVal {τ₁ = .(τ₄ ⇒ τ₁ cps[ τ₂ , τ₅ ])} {τ₂ = .τ₆} {τ₃ = .τ₃} e₁)
-        (NonVal {τ₁ = .τ₄} {τ₂ = .τ₅} {τ₃ = .τ₆} e₂))) κ =
-        cpsE𝑐 (τ₄ ⇒ τ₁ cps[ τ₂ , τ₅ ]) τ₆ τ₃ (NonVal e₁)
-              (CPSCont (λ m →
-                cpsE𝑐 τ₄ τ₅ τ₆ (NonVal e₂)
-                      (CPSCont (λ n → CPSApp (CPSVar m) (CPSVar n) κ))))
-  -- (PW) : K
-  cpsE𝑐 τ₁ τ₂ τ₃ (NonVal {τ₁ = .τ₁} {τ₂ = .τ₂} {τ₃ = .τ₃}
-        (App {τ₁ = .τ₁} {τ₂ = τ₄} {τ₃ = .τ₂} {τ₄ = τ₅} {τ₅ = .τ₅} {τ₆ = .τ₃}
-        (NonVal {τ₁ = .(τ₄ ⇒ τ₁ cps[ τ₂ , τ₅ ])} {τ₂ = .τ₅} {τ₃ = .τ₃} e₁)
-        (Val {τ₁ = .τ₄} {τ₂ = .τ₅} v₂))) κ =
-        cpsE𝑐 (τ₄ ⇒ τ₁ cps[ τ₂ , τ₅ ]) τ₅ τ₃ (NonVal e₁)
-              (CPSCont (λ m → CPSApp (CPSVar m) (cpsV𝑐 τ₄ v₂) κ))
-  -- (VQ) : K
-  cpsE𝑐 τ₁ τ₂ τ₃ (NonVal {τ₁ = .τ₁} {τ₂ = .τ₂} {τ₃ = .τ₃}
-        (App {τ₁ = .τ₁} {τ₂ = τ₄} {τ₃ = .τ₂} {τ₄ = τ₅} {τ₅ = .τ₃} {τ₆ = .τ₃}
-        (Val {τ₁ = .(τ₄ ⇒ τ₁ cps[ τ₂ , τ₅ ])} {τ₂ = .τ₃} v₁)
-        (NonVal {τ₁ = .τ₄} {τ₂ = .τ₅} {τ₃ = .τ₃} e₂))) κ =
-        cpsE𝑐 τ₄ τ₅ τ₃ (NonVal e₂)
-              (CPSCont (λ n → CPSApp (cpsV𝑐 (τ₄ ⇒ τ₁ cps[ τ₂ , τ₅ ]) v₁) (CPSVar n) κ))
-  -- (VW) : K
-  cpsE𝑐 τ₁ τ₂ τ₃ (NonVal {τ₁ = .τ₁} {τ₂ = .τ₂} {τ₃ = .τ₃}
-        (App {τ₁ = .τ₁} {τ₂ = τ₄} {τ₃ = .τ₂} {τ₄ = .τ₃} {τ₅ = .τ₃} {τ₆ = .τ₃}
-        (Val {τ₁ = .(τ₄ ⇒ τ₁ cps[ τ₂ , τ₃ ])} {τ₂ = .τ₃} v₁)
-        (Val {τ₁ = .τ₄} {τ₂ = .τ₃} v₂))) κ =
-        CPSApp (cpsV𝑐 (τ₄ ⇒ τ₁ cps[ τ₂ , τ₃ ]) v₁) (cpsV𝑐 τ₄ v₂) κ
-  -- ⟨ M ⟩ : K
-  cpsE𝑐 τ₁ τ₂ .τ₂ (NonVal {τ₁ = .τ₁} {τ₂ = .τ₂} {τ₃ = .τ₂}
-        (Reset τ₃ .τ₁ .τ₂ e)) κ = CPSRetE κ (cpsE𝑐 τ₃ τ₃ τ₁ e (CPSId (λ x → CPSVar x)))
-  -- (let x = M in N) : K   
-  cpsE𝑐 τ₁ τ₂ τ₃ (NonVal {τ₁ = .τ₁} {τ₂ = .τ₂} {τ₃ = .τ₃}
-        (Let {τ₁ = τ₄} {τ₂ = .τ₁} {α = .τ₂} {β = β} {γ = .τ₃} e₁ e₂)) κ =
-        cpsE𝑐 τ₄ β τ₃ e₁ (CPSCont (λ c → cpsE𝑐 τ₁ τ₂ β (e₂ c) κ))
-
-  -- M*
-  cpsEmain𝑐 : (τ₁ τ₂ τ₃ : typ) → {var : cpstyp → Set} →
-         term[ var ∘ cpsT ] τ₁ cps[ τ₂ , τ₃ ] →
-         cpsroot𝑐[ var ] ((cpsT τ₁ ⇒ cpsT τ₂) ⇒ cpsT τ₃)
-  cpsEmain𝑐 τ₁ τ₂ τ₃ e = CPSRoot (λ k → cpsE𝑐 τ₁ τ₂ τ₃ e (CPSKVar k)) 
-
+              
 -- sFun と sRoot の方の書き方はあっているのか...?
 
 -- 値と継続の代入規則
@@ -161,19 +89,13 @@ mutual
             cpsSubstVal𝑐 (λ _ _ → CPSNum n) v c (CPSNum n)
     sFun  : {τ₀ τ τ₁ τ₂ τ₃ τ₄ α β : cpstyp} →
             {e𝑟 : var τ → var (α ⇒ β) → var τ₂ → cpsroot𝑐[ var ] ((τ₁ ⇒ τ₃) ⇒ τ₄)} → 
-            -- {e₁ : var τ → var τ₂ → cpsroot𝑐[ var ] ((τ₁ ⇒ τ₃) ⇒ τ₄)} →
             {v : cpsvalue𝑐[ var ] τ} →
             {c : cpscont𝑐[ var ] (α ⇒ β)} →
             {e𝑟′ : var τ₂ → cpsroot𝑐[ var ] ((τ₁ ⇒ τ₃) ⇒ τ₄)} → 
-            -- {e₁′ : var τ₂ → cpsroot𝑐[ var ] ((τ₁ ⇒ τ₃) ⇒ τ₄)} →
             ((x : var τ₂) → cpsSubstRoot𝑐 (λ y k₂ → (e𝑟 y k₂) x) v c (e𝑟′ x)) → 
-            -- ((x : var τ₂) (k₁ : var ?) → cpsSubstRoot𝑐 (λ y → e₁ y x) v (e₁′ x)) →
             cpsSubstVal𝑐 (λ y k₂ → CPSFun (λ x → ((e𝑟 y k₂) x)))
                          v c
                          (CPSFun (λ x → e𝑟′ x))
-            -- cpsSubstVal𝑐 (λ y k₂ → CPSFun λ x → CPSRoot (λ k₁ → e₁ x k₁))
-            --              v c
-            --              (CPSFun λ x → CPSRoot e₁′)
 
   data cpsSubst𝑐 {var : cpstyp → Set} : {τ₁ τ₂ τ₃ τ₄ : cpstyp} →
                  (var τ₃ → var (τ₂ ⇒ τ₁) → cpsterm𝑐[ var ] τ₄) →
@@ -231,32 +153,110 @@ mutual
              ((x₁ : var τ₃) → cpsSubst𝑐 (λ x k → (e₁ x k) x₁) v c (e₁′ x₁)) →
              cpsSubstCont𝑐 (λ x k → CPSCont (e₁ x k)) v c (CPSCont e₁′)
 
+-- 値による代入規則
+mutual
+  data cpsSubstRootK𝑐 {var : cpstyp → Set} : {τ₁ τ₂ : cpstyp} →
+                      (var τ₁ → cpsroot𝑐[ var ] τ₂) →
+                      cpsvalue𝑐[ var ] τ₁ →
+                      cpsroot𝑐[ var ] τ₂ → Set where
+    sRoot : {τ₁ τ₂ τ₃ τ₄ α β : cpstyp} →
+            {e₁ : var τ₂ →  var (τ₁ ⇒ τ₃) → cpsterm𝑐[ var ] τ₄} → 
+            {v : cpsvalue𝑐[ var ] τ₂} →
+            {e₁′ : var (τ₁ ⇒ τ₃) → cpsterm𝑐[ var ] τ₄} → 
+            ((k₁ : var (τ₁ ⇒ τ₃)) → cpsSubstK𝑐 (λ y → (e₁ y) k₁) v (e₁′ k₁)) →
+            cpsSubstRootK𝑐 (λ y → CPSRoot (λ k₁ → (e₁ y) k₁)) v (CPSRoot (λ k₁ → e₁′ k₁))
+
+  data cpsSubstValK𝑐 {var : cpstyp → Set} : {τ₁ τ₂ : cpstyp} →
+                    (var τ₁ → cpsvalue𝑐[ var ] τ₂) →
+                    cpsvalue𝑐[ var ] τ₁ →
+                    cpsvalue𝑐[ var ] τ₂ → Set where
+    sVar= : {τ₁ : cpstyp} {v : cpsvalue𝑐[ var ] τ₁} →
+            cpsSubstValK𝑐 (λ x → CPSVar x) v v
+    sVar≠ : {τ₁ τ₂ : cpstyp} {v : cpsvalue𝑐[ var ] τ₂} {x : var τ₁} →
+            cpsSubstValK𝑐 (λ _ → CPSVar x) v (CPSVar x)
+    sNum  : {τ₁ : cpstyp} {v : cpsvalue𝑐[ var ] τ₁}  {n : ℕ} →
+            cpsSubstValK𝑐 (λ _ → CPSNum n) v (CPSNum n)
+    sFun  : {τ₀ τ τ₁ τ₂ τ₃ τ₄ α β : cpstyp} →
+            {e𝑟 : var τ →  var τ₂ → cpsroot𝑐[ var ] ((τ₁ ⇒ τ₃) ⇒ τ₄)} → 
+            {v : cpsvalue𝑐[ var ] τ} →
+            {e𝑟′ : var τ₂ → cpsroot𝑐[ var ] ((τ₁ ⇒ τ₃) ⇒ τ₄)} → 
+            ((x : var τ₂) → cpsSubstRootK𝑐 (λ y → (e𝑟 y) x) v (e𝑟′ x)) → 
+            cpsSubstValK𝑐 (λ y → CPSFun (λ x → (e𝑟 y x))) v (CPSFun (λ x → e𝑟′ x))
+            
+  data cpsSubstK𝑐 {var : cpstyp → Set} : {τ₁ τ₂ : cpstyp} →
+                  (var τ₁ → cpsterm𝑐[ var ] τ₂) →
+                  cpsvalue𝑐[ var ] τ₁ →
+                  cpsterm𝑐[ var ] τ₂ → Set where
+    sApp  : {τ₁ τ₂ τ₃ τ₄ τ₅ τ₆ τ₇ : cpstyp} →
+            {v₁  : var τ₃ → cpsvalue𝑐[ var ] (τ₅ ⇒ ((τ₄ ⇒ τ₆) ⇒ τ₇)) } →
+            {v₂  : var τ₃ → cpsvalue𝑐[ var ] τ₅ } →
+            {k₃  : var τ₃ → cpscont𝑐[ var ] (τ₄ ⇒ τ₆) } →
+            {v   : cpsvalue𝑐[ var ] τ₃ } →
+            {v₁′ : cpsvalue𝑐[ var ] (τ₅ ⇒ ((τ₄ ⇒ τ₆) ⇒ τ₇)) } →
+            {v₂′ : cpsvalue𝑐[ var ] τ₅ } →
+            {k₃′ : cpscont𝑐[ var ] (τ₄ ⇒ τ₆) } →
+            cpsSubstValK𝑐 (λ x → (v₁ x)) v v₁′ →
+            cpsSubstValK𝑐 (λ x → (v₂ x)) v v₂′ →
+            cpsSubstContK𝑐 (λ k → (k₃ k)) v k₃′ → 
+            cpsSubstK𝑐 (λ x → CPSApp (v₁ x) (v₂ x) (k₃ x)) v (CPSApp v₁′ v₂′ k₃′)           
+    sRet  : {τ τ₁ τ₂ τ₃ : cpstyp} →
+            {k₁  : var τ₃ → cpscont𝑐[ var ] (τ₂ ⇒ τ₁)} →
+            {v₂  : var τ₃ → cpsvalue𝑐[ var ] τ₂} →
+            {v   : cpsvalue𝑐[ var ] τ₃} →
+            {k₁′ : cpscont𝑐[ var ] (τ₂ ⇒ τ₁)} →
+            {v₂′ : cpsvalue𝑐[ var ] τ₂} →
+            cpsSubstContK𝑐 k₁ v k₁′ → cpsSubstValK𝑐 v₂ v v₂′ →
+            cpsSubstK𝑐 (λ x → CPSRet (k₁ x) (v₂ x)) v (CPSRet k₁′ v₂′)
+    sRetE : {τ τ₁ τ₂ : cpstyp} →
+            {k₁  : var τ → cpscont𝑐[ var ] (τ₂ ⇒ τ₁)} →
+            {e₂  : var τ → cpsterm𝑐[ var ] τ₂} →
+            {v   : cpsvalue𝑐[ var ] τ} →
+            {k₁′ : cpscont𝑐[ var ] (τ₂ ⇒ τ₁)} →
+            {e₂′ : cpsterm𝑐[ var ] τ₂} →
+            cpsSubstContK𝑐 k₁ v k₁′ → cpsSubstK𝑐 (λ x → e₂ x) v e₂′ → 
+            cpsSubstK𝑐 (λ x → CPSRetE (k₁ x) (e₂ x)) v (CPSRetE k₁′ e₂′)
+
+  data cpsSubstContK𝑐 {var : cpstyp → Set} : {τ₁ τ₂ τ₃ : cpstyp} →
+                      (var τ₁ → cpscont𝑐[ var ] (τ₂ ⇒ τ₃)) →
+                      cpsvalue𝑐[ var ] τ₁ →
+                      cpscont𝑐[ var ] (τ₂ ⇒ τ₃) → Set where
+    sKVar≠ : {τ₁ α β : cpstyp}
+             {v : cpsvalue𝑐[ var ] τ₁} {k : var (α ⇒ β)} →
+             cpsSubstContK𝑐 (λ _ → CPSKVar k) v (CPSKVar k)
+    sKFun  : {τ₀ τ τ₁ τ₂ τ₃ τ₄ τ₅ : cpstyp} →
+             {e₁ : var τ₅ → var τ₃ → cpsterm𝑐[ var ] τ₄ } → 
+             {v  : cpsvalue𝑐[ var ] τ₅} → 
+             {e₁′ : var τ₃ → cpsterm𝑐[ var ] τ₄ } → 
+             ((x₁ : var τ₃) → cpsSubstK𝑐 (λ x → (e₁ x) x₁) v (e₁′ x₁)) →
+             cpsSubstContK𝑐 (λ x → CPSCont (e₁ x)) v (CPSCont e₁′)
+
+
 mutual 
   data cpsReduce {var : cpstyp → Set} :
                  {τ₁ : cpstyp} →
                  cpsterm𝑐[ var ] τ₁ →
                  cpsterm𝑐[ var ] τ₁ → Set where
-       RBeta𝑐 : {τ₁ τ₂ τ₃ τ₄ : cpstyp} →
-               {e₁ : var τ₂ → var (τ₁ ⇒ τ₃) → cpsterm𝑐[ var ] τ₄} →
-               {v : cpsvalue𝑐[ var ] τ₂} →
-               {c : cpscont𝑐[ var ] (τ₁ ⇒ τ₃)} →
-               {e₂ : cpsterm𝑐[ var ] τ₄} →
-               cpsSubst𝑐 e₁ v c e₂ →
-               cpsReduce (CPSApp (CPSFun (λ x → CPSRoot (λ k → e₁ x k))) v c) e₂
-       -- RLet : {τ₁ τ₂ : cpstyp} →
-       --        {v₁ : cpsvalue𝑐[ var ] {!!}} →
-       --        {e𝑘 : {!!}} →
-       --        {e𝑘′ : {!!}} →
-       --        cpsSubst𝑐 {!!} {!!} {!!} {!!} →
-       --        cpsReduce (CPSRet (CPSCont (λ x → e𝑘 x)) v₁) e𝑘′
-       RId𝑐    : {τ₁ : cpstyp} →
-                 {e : cpsterm𝑐[ var ] τ₁} →
-                 cpsReduce e e
-       RTrans𝑐 : {τ₁ : cpstyp} →
-                 (e₁ e₂ e₃ : cpsterm𝑐[ var ] τ₁) →
-                 cpsReduce e₁ e₂ →
-                 cpsReduce e₂ e₃ →
-                 cpsReduce e₁ e₃
+       RBeta𝑐   : {τ₁ τ₂ τ₃ τ₄ : cpstyp} →
+                  {e₁ : var τ₂ → var (τ₁ ⇒ τ₃) → cpsterm𝑐[ var ] τ₄} →
+                  {v : cpsvalue𝑐[ var ] τ₂} →
+                  {c : cpscont𝑐[ var ] (τ₁ ⇒ τ₃)} →
+                  {e₂ : cpsterm𝑐[ var ] τ₄} →
+                  cpsSubst𝑐 e₁ v c e₂ →
+                  cpsReduce (CPSApp (CPSFun (λ x → CPSRoot (λ k → e₁ x k))) v c) e₂
+       RLet     : {τ₁ τ₂ : cpstyp} →
+                  {v₁ : cpsvalue𝑐[ var ] τ₁} →
+                  {e𝑐 : var τ₁ → cpsterm𝑐[ var ] τ₂} →
+                  {e𝑐′ : cpsterm𝑐[ var ] τ₂} →
+                  cpsSubstK𝑐 e𝑐 v₁ e𝑐′ → 
+                  cpsReduce (CPSRet (CPSCont (λ x → e𝑐 x)) v₁) e𝑐′
+       RId𝑐     : {τ₁ : cpstyp} →
+                  {e : cpsterm𝑐[ var ] τ₁} →
+                  cpsReduce e e
+       RTrans𝑐  : {τ₁ : cpstyp} →
+                  (e₁ e₂ e₃ : cpsterm𝑐[ var ] τ₁) →
+                  cpsReduce e₁ e₂ →
+                  cpsReduce e₂ e₃ →
+                  cpsReduce e₁ e₃
        RTrans𝑐′ : {τ₁ : cpstyp} →
                   (e₁ e₂ e₃ : cpsterm𝑐[ var ] τ₁) →
                   cpsReduce e₂ e₁ →
