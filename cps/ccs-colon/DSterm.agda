@@ -60,7 +60,7 @@ mutual
     -- (λ_.x)[v] → x
     sVar≠  : {τ₁ τ₂ : typ} {v : value[ var ] τ₂ cps[τ,τ]} {x : var τ₁} →
              SubstVal (λ _ → Var x) v (Var x)
-    -- (λ_.n)[v] → n
+    -- -- (λ_.n)[v] → n
     sNum   : {τ₁ : typ} {v : value[ var ] τ₁ cps[τ,τ]} {n : ℕ} →
              SubstVal (λ _ → Num n) v (Num n)
     -- (λ_.S)[v] → S
