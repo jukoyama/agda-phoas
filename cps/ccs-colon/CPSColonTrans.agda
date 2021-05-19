@@ -22,59 +22,57 @@ mutual
   cpsV𝑐 .Nat (Num n) = CPSNum n
   cpsV𝑐 τ₁  (Var v) = CPSVar v
   cpsV𝑐 .(τ₂ ⇒ τ₁ cps[ τ₃ , τ₄ ]) (Fun τ₁ τ₂ {τ₃ = τ₃} {τ₄ = τ₄} e) =
-    CPSFun (λ x k → cpsE𝑐 τ₁ τ₃ τ₄ (e x) (CPSKVar k))
+    CPSFun (λ x k → cpsE𝑐 τ₁ τ₃ τ₄ τ₃ τ₁ (e x) (CPSKVar k))
   cpsV𝑐 .(((τ₃ ⇒ τ₄ cps[ τ , τ ]) ⇒ τ₁ cps[ τ₁ , τ₂ ]) ⇒ τ₃ cps[ τ₄ , τ₂ ])
         (Shift {τ = τ} {τ₁ = τ₁} {τ₂ = τ₂} {τ₃ = τ₃} {τ₄ = τ₄}) = CPSShift
-        
+
+  -- 型はこれでいいのか？
   -- M : K
-  cpsE𝑐 : (τ₁ τ₂ τ₃ : typ) → {var : cpstyp → Set} {cvar : conttyp → Set} →
+  cpsE𝑐 : (τ₁ τ₂ τ₃ τ₄ τ₅ : typ) → {var : cpstyp → Set} {cvar : conttyp → Set} →
           term[ var ∘ cpsT ] τ₁ cps[ τ₂ , τ₃ ] →
-          cpscont𝑐[ var , cvar ] (cpsT τ₁ ⇒ cpsT τ₂) →
-          cpsterm𝑐[ var , cvar ] (cpsT τ₃)
+          cpscont𝑐[ var , cvar ] (cpsT τ₅ ⇒ cpsT τ₄) (cpsT τ₁ ⇒ cpsT τ₂) →
+          cpsterm𝑐[ var , cvar ] (cpsT τ₅ ⇒ cpsT τ₄) (cpsT τ₃)
 
   -- V : K
-  cpsE𝑐 τ₁ τ₂ .τ₂ (Val v) κ = CPSRet κ (cpsV𝑐 τ₁ v)
+  cpsE𝑐 τ₁ τ₂ .τ₂ τ₄ τ₅ (Val v) κ = CPSRet κ (cpsV𝑐 τ₁ v)
 
   -- (PQ) : K
-  cpsE𝑐 τ₁ τ₂ τ₃ (NonVal {τ₁ = .τ₁} {τ₂ = .τ₂} {τ₃ = .τ₃}
-        (App {τ₁ = .τ₁} {τ₂ = τ₄} {τ₃ = .τ₂} {τ₄ = τ₅} {τ₅ = τ₆} {τ₆ = .τ₃}
-             (NonVal {τ₁ = .(τ₄ ⇒ τ₁ cps[ τ₂ , τ₅ ])} {τ₂ = .τ₆} {τ₃ = .τ₃} e₁)
-             (NonVal {τ₁ = .τ₄} {τ₂ = .τ₅} {τ₃ = .τ₆} e₂))) κ =
-    cpsE𝑐 (τ₄ ⇒ τ₁ cps[ τ₂ , τ₅ ]) τ₆ τ₃ (NonVal e₁)
+  cpsE𝑐 τ₁ τ₂ τ₃ τ₄ τ₅ (NonVal {τ₁ = .τ₁} {τ₂ = .τ₂} {τ₃ = .τ₃}
+        (App {τ₁ = .τ₁} {τ₂ = τ₆} {τ₃ = .τ₂} {τ₄ = τ₇} {τ₅ = τ₈} {τ₆ = .τ₃}
+             (NonVal {τ₁ = .(τ₆ ⇒ τ₁ cps[ τ₂ , τ₇ ])} {τ₂ = .τ₈} {τ₃ = .τ₃} e₁)
+             (NonVal {τ₁ = .τ₆} {τ₂ = .τ₇} {τ₃ = .τ₈} e₂))) κ =
+    cpsE𝑐 (τ₆ ⇒ τ₁ cps[ τ₂ , τ₇ ]) τ₈ τ₃ τ₄ τ₅ (NonVal e₁)
           (CPSCont (λ m →
-             cpsE𝑐 τ₄ τ₅ τ₆ (NonVal e₂)
-                      (CPSCont (λ n → CPSApp (CPSVar m) (CPSVar n) κ))))
+              cpsE𝑐 τ₆ τ₇ τ₈ τ₄ τ₅ (NonVal e₂)
+                    (CPSCont (λ n → CPSApp (CPSVar m) (CPSVar n) κ))))
 
   -- (PW) : K
-  cpsE𝑐 τ₁ τ₂ τ₃ (NonVal {τ₁ = .τ₁} {τ₂ = .τ₂} {τ₃ = .τ₃}
-        (App {τ₁ = .τ₁} {τ₂ = τ₄} {τ₃ = .τ₂} {τ₄ = τ₅} {τ₅ = .τ₅} {τ₆ = .τ₃}
-             (NonVal {τ₁ = .(τ₄ ⇒ τ₁ cps[ τ₂ , τ₅ ])} {τ₂ = .τ₅} {τ₃ = .τ₃} e₁)
-             (Val {τ₁ = .τ₄} {τ₂ = .τ₅} v₂))) κ =
-    cpsE𝑐 (τ₄ ⇒ τ₁ cps[ τ₂ , τ₅ ]) τ₅ τ₃ (NonVal e₁)
-          (CPSCont (λ m → CPSApp (CPSVar m) (cpsV𝑐 τ₄  v₂) κ))
-
-
+  cpsE𝑐 τ₁ τ₂ τ₃ τ₄ τ₅ (NonVal {τ₁ = .τ₁} {τ₂ = .τ₂} {τ₃ = .τ₃}
+        (App {τ₁ = .τ₁} {τ₂ = τ₆} {τ₃ = .τ₂} {τ₄ = τ₇} {τ₅ = .τ₇} {τ₆ = .τ₃}
+             (NonVal {τ₁ = .(τ₆ ⇒ τ₁ cps[ τ₂ , τ₇ ])} {τ₂ = .τ₇} {τ₃ = .τ₃} e₁)
+             (Val {τ₁ = .τ₆} {τ₂ = .τ₇} v₂))) κ =
+    cpsE𝑐 (τ₆ ⇒ τ₁ cps[ τ₂ , τ₇ ]) τ₇ τ₃ τ₄ τ₅ (NonVal e₁)
+          (CPSCont (λ m → CPSApp (CPSVar m) (cpsV𝑐 τ₆ v₂) κ))
+    
   -- (VQ) : K
-  cpsE𝑐 τ₁ τ₂ τ₃ (NonVal {τ₁ = .τ₁} {τ₂ = .τ₂} {τ₃ = .τ₃}
-        (App {τ₁ = .τ₁} {τ₂ = τ₄} {τ₃ = .τ₂} {τ₄ = τ₅} {τ₅ = .τ₃} {τ₆ = .τ₃}
-             (Val {τ₁ = .(τ₄ ⇒ τ₁ cps[ τ₂ , τ₅ ])} {τ₂ = .τ₃} v₁)
-             (NonVal {τ₁ = .τ₄} {τ₂ = .τ₅} {τ₃ = .τ₃} e₂))) κ =
-     cpsE𝑐 τ₄ τ₅ τ₃ (NonVal e₂)
-           (CPSCont (λ n → CPSApp (cpsV𝑐 (τ₄ ⇒ τ₁ cps[ τ₂ , τ₅ ]) v₁) (CPSVar n) κ))
+  cpsE𝑐 τ₁ τ₂ τ₃ τ₄ τ₅ (NonVal {τ₁ = .τ₁} {τ₂ = .τ₂} {τ₃ = .τ₃}
+        (App {τ₁ = .τ₁} {τ₂ = τ₆} {τ₃ = .τ₂} {τ₄ = τ₇} {τ₅ = .τ₃} {τ₆ = .τ₃}
+             (Val {τ₁ = .(τ₆ ⇒ τ₁ cps[ τ₂ , τ₇ ])} {τ₂ = .τ₃} v₁)
+             (NonVal {τ₁ = .τ₆} {τ₂ = .τ₇} {τ₃ = .τ₃} e₂))) κ =
+    cpsE𝑐 τ₆ τ₇ τ₃ τ₄ τ₅ (NonVal e₂)
+          (CPSCont (λ n → CPSApp (cpsV𝑐 (τ₆ ⇒ τ₁ cps[ τ₂ , τ₇ ]) v₁) (CPSVar n) κ))
 
-  -- (VW) : K
-  cpsE𝑐 τ₁ τ₂ τ₃ (NonVal {τ₁ = .τ₁} {τ₂ = .τ₂} {τ₃ = .τ₃}
-        (App {τ₁ = .τ₁} {τ₂ = τ₄} {τ₃ = .τ₂} {τ₄ = .τ₃} {τ₅ = .τ₃} {τ₆ = .τ₃}
-             (Val {τ₁ = .(τ₄ ⇒ τ₁ cps[ τ₂ , τ₃ ])} {τ₂ = .τ₃} v₁)
-             (Val {τ₁ = .τ₄} {τ₂ = .τ₃} v₂))) κ =
-    CPSApp (cpsV𝑐 (τ₄ ⇒ τ₁ cps[ τ₂ , τ₃ ]) v₁) (cpsV𝑐 τ₄ v₂) κ
+  -- (VW): K
+  cpsE𝑐 τ₁ τ₂ τ₃ τ₄ τ₅ (NonVal {τ₁ = .τ₁} {τ₂ = .τ₂} {τ₃ = .τ₃}
+        (App {τ₁ = .τ₁} {τ₂ = τ₆} {τ₃ = .τ₂} {τ₄ = .τ₃} {τ₅ = .τ₃} {τ₆ = .τ₃}
+             (Val {τ₁ = .(τ₆ ⇒ τ₁ cps[ τ₂ , τ₃ ])} {τ₂ = .τ₃} v₁)
+             (Val {τ₁ = .τ₆} {τ₂ = .τ₃} v₂))) κ =
+    CPSApp (cpsV𝑐 (τ₆ ⇒ τ₁ cps[ τ₂ , τ₃ ]) v₁) (cpsV𝑐 τ₆ v₂) κ
 
   -- ⟨ M ⟩ : K
-  cpsE𝑐 τ₁ τ₂ .τ₂ (NonVal {τ₁ = .τ₁} {τ₂ = .τ₂} {τ₃ = .τ₂}
-        (Reset τ₃ .τ₁ .τ₂ e)) κ =
-    CPSRetE κ (cpsE𝑐 τ₃ τ₃ τ₁ e CPSId)
+  cpsE𝑐 τ₁ τ₂ .τ₂ τ₄ τ₅ (NonVal {τ₁ = .τ₁} {τ₂ = .τ₂} {τ₃ = .τ₂} (Reset τ₃ .τ₁ .τ₂ e)) κ =
+    CPSRetE κ (cpsE𝑐 τ₃ τ₃ τ₁ τ₃ τ₃ e CPSId)
 
   -- (let x = M in N) : K
-  cpsE𝑐 τ₁ τ₂ τ₃ (NonVal {τ₁ = .τ₁} {τ₂ = .τ₂} {τ₃ = .τ₃}
-        (Let {τ₁ = τ₄} {τ₂ = .τ₁} {α = .τ₂} {β = β} {γ = .τ₃} e₁ e₂)) κ =
-    cpsE𝑐 τ₄ β τ₃ e₁ (CPSCont (λ c → cpsE𝑐 τ₁ τ₂ β (e₂ c) κ))
+  cpsE𝑐 τ₁ τ₂ τ₃ τ₄ τ₅ (NonVal (Let {τ₁ = τ₆} {τ₂ = .τ₁} {α = .τ₂} {β = β} {γ = .τ₃} e₁ e₂)) κ =
+    cpsE𝑐 τ₆ β τ₃ τ₄ τ₅ e₁ (CPSCont (λ c → cpsE𝑐 τ₁ τ₂ β τ₄ τ₅ (e₂ c) κ))
