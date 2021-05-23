@@ -26,32 +26,27 @@ mutual
   dsV𝑐 .Nat (CPSNum n) = Num n
   dsV𝑐 .(τ₂ ⇒[ τ₁ ⇒ τ₃ ]⇒ τ₄)
        (CPSFun {τ₁ = τ₁} {τ₂ = τ₂} {τ₃ = τ₃} {τ₄ = τ₄} e) =
-    Fun (dsT τ₁) (dsT τ₂) λ x → {!Val!}
+    Fun (dsT τ₁) (dsT τ₂) λ x → {!!}
   dsV𝑐 .(((τ₁ ⇒[ τ₂ ⇒ τ₃ ]⇒ τ₃) ⇒[ τ₄ ⇒ τ₄ ]⇒ τ₅) ⇒[ τ₁ ⇒ τ₂ ]⇒ τ₅)
        (CPSShift {τ₁ = τ₁} {τ₂ = τ₂} {τ₃ = τ₃} {τ₄ = τ₄} {τ₅ = τ₅}) = Shift
 
-  dsC𝑐 : (τ₁ τ₂ τ₃ : cpstyp) → {var : typ → Set} {cvar : conttyp → Set} →
-         cpscont𝑐[ var ∘ dsT , cvar ] (τ₁ ⇒ τ₂) →
-         pcontext[ var , dsT τ₁ cps[ dsT τ₂ , dsT τ₃ ]] dsT τ₁
-                 cps[ dsT τ₂ , dsT τ₃ ]
-  dsC𝑐 τ₁ τ₂  τ₃ (CPSKVar k) = Hole
-  dsC𝑐 τ₁ .τ₁ τ₃ CPSId       = Hole
-  dsC𝑐 τ₁ τ₂  τ₃ (CPSCont e) = Frame (Let λ x → {!dsE𝑐 ? ? ? ? (e x)!}) Hole
+  dsC𝑐 : (τ₁ τ₂ τ₃ τ₄ τ₅ : cpstyp) → {var : typ → Set} {cvar : conttyp → Set} →
+         cpscont𝑐[ var ∘ dsT , cvar ] (τ₅ ⇒ τ₄) (τ₁ ⇒ τ₂) →
+         pcontext[ var , dsT τ₁ cps[ dsT τ₂ , dsT τ₃ ]] dsT τ₅
+                 cps[ dsT τ₄ , dsT τ₃ ]
+  dsC𝑐 τ₁ τ₂ τ₃ .τ₂ .τ₁ (CPSKVar k) = Hole
+  dsC𝑐 τ₁ .τ₁ τ₃ .τ₁ .τ₁ CPSId = Hole
+  dsC𝑐 τ₁ τ₂ τ₃ τ₄ τ₅ (CPSCont e) = Frame (Let (λ x → dsE𝑐 τ₅ τ₄ τ₂ (e x))) Hole
 
-
-  dsE𝑐 : (τ₁ τ₂ τ₃ τ₄ : cpstyp) → {var : typ → Set} {cvar : conttyp → Set} →
-         cpsterm𝑐[ var ∘ dsT , cvar ] τ₃ →
+  dsE𝑐 : (τ₁ τ₂ τ₃ : cpstyp) → {var : typ → Set} {cvar : conttyp → Set} →
+         cpsterm𝑐[ var ∘ dsT , cvar ] (τ₁ ⇒ τ₂) τ₃ →
          term[ var ] dsT τ₁ cps[ dsT τ₂ , dsT τ₃ ]
-  dsE𝑐 τ₁ τ₂ τ₃ τ₄ (CPSRet k v) =
-      pcontext-plug (dsC𝑐 {!!} {!!} {!!} k) (Val (dsV𝑐 {!!} v))
-  dsE𝑐 τ₁ τ₂ τ₃ τ₄ (CPSApp v w k) =
-      pcontext-plug (dsC𝑐 {!!} {!!} {!!} k)
-                  (NonVal (App (Val (dsV𝑐 {!!} v)) (Val (dsV𝑐 {!!} w))))
-  dsE𝑐 τ₁ τ₂ τ₃ τ₄ (CPSRetE k e) =
-      pcontext-plug (dsC𝑐 {!!} {!!} {!!} k)
-                    (NonVal (Reset {!!} {!!} {!!} (dsE𝑐 {!!} {!!} {!!} {!!} e)))
-
-  dsEMain𝑐 : (τ₁ τ₂ τ₃ α β : cpstyp) → {var : typ → Set} {cvar : conttyp → Set} →
-             (cvar (α ⇒ β) → cpsterm𝑐[ var ∘ dsT , cvar ] {!!}) → 
-             term[ var ] (dsT τ₁) cps[ dsT τ₂ , dsT τ₃ ]
-  dsEMain𝑐 τ₁ τ₂ τ₃ α β e = NonVal (App (Val (Fun (dsT τ₁) {!!} (λ k → ?))) {!!})
+         
+  dsE𝑐 τ₁ τ₂ τ₃ (CPSRet {τ₁ = .τ₃} {τ₂ = τ₆} {τ₃ = .τ₂} {τ₄ = .τ₁} k v) =
+    pcontext-plug (dsC𝑐 τ₆ τ₃ τ₃ τ₂ τ₁ k) (Val (dsV𝑐 τ₆ v))
+  dsE𝑐 τ₁ τ₂ τ₃ (CPSApp {τ₁ = τ₆} {τ₂ = τ₇} {τ₃ = τ₈} {τ₄ = .τ₃} {τ₅ = .τ₂} {τ₆ = .τ₁} v w k) =
+    pcontext-plug (dsC𝑐 τ₆ τ₈ τ₃ τ₂ τ₁ k)
+                  (NonVal (App (Val (dsV𝑐 (τ₇ ⇒[ τ₆ ⇒ τ₈ ]⇒ τ₃) v)) (Val (dsV𝑐 τ₇ w))))
+  dsE𝑐 τ₁ τ₂ τ₃ (CPSRetE {τ₀ = τ₀} {τ₁ = .τ₃} {τ₂ = τ₆} {τ₃ = .τ₂} {τ₄ = .τ₁} k e) =
+    pcontext-plug (dsC𝑐 τ₆ τ₃ τ₃ τ₂ τ₁ k)
+                  (NonVal (Reset (dsT τ₀) (dsT τ₆) (dsT τ₃) (dsE𝑐 τ₀ τ₀ τ₆ e)))
