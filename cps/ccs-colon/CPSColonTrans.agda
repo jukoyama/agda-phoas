@@ -16,23 +16,28 @@ cpsT (τ₂ ⇒ τ₁ cps[ τ₃ , τ₄ ]) =
 -- CPS transformation to target term
 
 mutual
-  cpsV𝑐 : (τ₁ : typ) → {var : cpstyp → Set} {cvar : conttyp → Set} →
+  cpsMain𝑐 : (τ₁ τ₂ τ₃ : typ) →
+             {var : cpstyp → Set} {cvar : cpstyp → conttyp → Set} →
+             term[ var ∘ cpsT ] τ₁ cps[ τ₂ , τ₃ ] →
+             (cvar (cpsT τ₂) (cpsT τ₁ ⇒ cpsT τ₂) → cpsterm𝑐[ var , cvar ] (cpsT τ₁ ⇒ cpsT τ₂) (cpsT τ₃))
+  cpsMain𝑐 τ₁ τ₂ τ₃ e = λ k → cpsE𝑐 τ₁ τ₂ τ₃ τ₁ τ₂ e (CPSKVar k)
+
+  cpsV𝑐 : (τ₁ : typ) → {var : cpstyp → Set} {cvar : cpstyp → conttyp → Set} →
           value[ var ∘ cpsT ] τ₁ cps[τ,τ] →
           cpsvalue𝑐[ var , cvar ] (cpsT τ₁)
   cpsV𝑐 .Nat (Num n) = CPSNum n
   cpsV𝑐 τ₁  (Var v) = CPSVar v
   cpsV𝑐 .(τ₂ ⇒ τ₁ cps[ τ₃ , τ₄ ]) (Fun τ₁ τ₂ {τ₃ = τ₃} {τ₄ = τ₄} e) =
-    CPSFun (λ x k → cpsE𝑐 τ₁ τ₃ τ₄ τ₃ τ₁ (e x) (CPSKVar k))
+    CPSFun {τ = cpsT τ₃} (λ x k → cpsE𝑐 τ₁ τ₃ τ₄ τ₁ τ₃ (e x) (CPSKVar k))
   cpsV𝑐 .(((τ₃ ⇒ τ₄ cps[ τ , τ ]) ⇒ τ₁ cps[ τ₁ , τ₂ ]) ⇒ τ₃ cps[ τ₄ , τ₂ ])
         (Shift {τ = τ} {τ₁ = τ₁} {τ₂ = τ₂} {τ₃ = τ₃} {τ₄ = τ₄}) = CPSShift
 
-  -- 型はこれでいいのか？
   -- M : K
-  cpsE𝑐 : (τ₁ τ₂ τ₃ τ₄ τ₅ : typ) → {var : cpstyp → Set} {cvar : conttyp → Set} →
+  cpsE𝑐 : (τ₁ τ₂ τ₃ τ₄ τ₅ : typ) → {var : cpstyp → Set} {cvar : cpstyp → conttyp → Set} →
           term[ var ∘ cpsT ] τ₁ cps[ τ₂ , τ₃ ] →
-          cpscont𝑐[ var , cvar ] (cpsT τ₅ ⇒ cpsT τ₄) (cpsT τ₁ ⇒ cpsT τ₂) →
-          cpsterm𝑐[ var , cvar ] (cpsT τ₅ ⇒ cpsT τ₄) (cpsT τ₃)
-
+          cpscont𝑐[ var , cvar ] (cpsT τ₄ ⇒ cpsT τ₅) (cpsT τ₁ ⇒ cpsT τ₂) →
+          cpsterm𝑐[ var , cvar ] (cpsT τ₄ ⇒ cpsT τ₅) (cpsT τ₃)
+          
   -- V : K
   cpsE𝑐 τ₁ τ₂ .τ₂ τ₄ τ₅ (Val v) κ = CPSRet κ (cpsV𝑐 τ₁ v)
 
