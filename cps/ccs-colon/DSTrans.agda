@@ -45,7 +45,7 @@ mutual
          cpscont𝑐[ var ∘ dsT , (λ v v₁ → var (dsT𝑐 v v₁)) ] (τ₄ ⇒ τ₅) (τ₁ ⇒ τ₂) →
          pcontext𝑘[ var , dsT τ₁ cps[ dsT τ₂ , dsT τ₃ ]] dsT τ₅
                  cps[ dsT τ₅ , dsT τ₃ ]
-  dsC𝑐 τ₁ τ₂ τ₃ .τ₁ .τ₂ {var} (CPSKVar {τ₁ = .τ₁} {τ₂ = .τ₂} k) = Frame (App₂ (Var k)) Hole
+  dsC𝑐 τ₁ τ₂ τ₃ .τ₂ .τ₂ {var} (CPSKVar {τ₁ = .τ₁} {τ₂ = .τ₂} k) = Frame (App₂ (Var k)) Hole
   dsC𝑐 τ₁ .τ₁ τ₃ .τ₁ .τ₁ {var} (CPSId {τ₁ = .τ₁}) = Hole
   dsC𝑐 τ₁ τ₂ τ₃ τ₄ τ₅ {var} (CPSCont {τ₁ = .τ₁} {τ₂ = .τ₂} {τ₃ = .τ₄} {τ₄ = .τ₅} e) =
     Frame (Let (λ x → dsE𝑐 τ₂ τ₄ τ₅ (e x))) Hole
