@@ -21,34 +21,35 @@ mutual
     CPSKVar : {τ₁ τ₂ : cpstyp} → cvar τ₂ (τ₁ ⇒ τ₂) →
               cpscont𝑐[ var , cvar ] (τ₂ ⇒ τ₂) (τ₁ ⇒ τ₂)
     CPSId   : {τ₁ : cpstyp} → cpscont𝑐[ var , cvar ] (τ₁ ⇒ τ₁) (τ₁ ⇒ τ₁)
-    CPSCont : {τ₁ τ₂ τ₃ τ₄ : cpstyp} → (var τ₁ → cpsterm𝑐[ var , cvar ] (τ₃ ⇒ τ₄) τ₂) →
-              cpscont𝑐[ var , cvar ] (τ₃ ⇒ τ₄) (τ₁ ⇒ τ₂)
+    CPSCont : {τ₁ τ₂ τ₄ : cpstyp} → (var τ₁ → cpsterm𝑐[ var , cvar ] (τ₄ ⇒ τ₄) τ₂) →
+              cpscont𝑐[ var , cvar ] (τ₄ ⇒ τ₄) (τ₁ ⇒ τ₂)
 
   data cpsvalue𝑐[_,_] (var : cpstyp → Set) (cvar : cpstyp → conttyp → Set) : cpstyp → Set where
     CPSVar : {τ₁ : cpstyp} → var τ₁ → cpsvalue𝑐[ var , cvar ] τ₁
     CPSNum : ℕ → cpsvalue𝑐[ var , cvar ] Nat
     CPSFun : {τ τ₁ τ₂ τ₃ τ₄ : cpstyp} →
-             (var τ₂ → cvar τ (τ₁ ⇒ τ₃) → cpsterm𝑐[ var , cvar ] (τ₁ ⇒ τ₃) τ₄) →
+             (var τ₂ → cvar τ (τ₁ ⇒ τ₃) → cpsterm𝑐[ var , cvar ] (τ₃ ⇒ τ₃) τ₄) →
              cpsvalue𝑐[ var , cvar ] (τ₂ ⇒[ τ₁ ⇒ τ₃ ]⇒ τ₄)
     CPSShift : {τ₁ τ₂ τ₃ τ₄ τ₅ : cpstyp} →
                cpsvalue𝑐[ var , cvar ]
                  (((τ₁ ⇒[ τ₂ ⇒ τ₃ ]⇒ τ₃) ⇒[ τ₄ ⇒ τ₄ ]⇒ τ₅) ⇒[ τ₁ ⇒ τ₂ ]⇒ τ₅)
 
   data cpsterm𝑐[_,_] (var : cpstyp → Set) (cvar : cpstyp → conttyp → Set) : conttyp → cpstyp → Set where
-    CPSRet : {τ₁ τ₂ τ₃ τ₄ : cpstyp} →
-             cpscont𝑐[ var , cvar ] (τ₃ ⇒ τ₄) (τ₁ ⇒ τ₂) →
+    CPSRet : {τ₁ τ₂ τ₃ : cpstyp} →
+             cpscont𝑐[ var , cvar ] (τ₃ ⇒ τ₃) (τ₁ ⇒ τ₂) →
              cpsvalue𝑐[ var , cvar ] τ₁ →
-             cpsterm𝑐[ var , cvar ] (τ₃ ⇒ τ₄) τ₂
-    CPSApp : {τ₁ τ₂ τ₃ τ₄ τ₅ τ₆ : cpstyp} →
+             cpsterm𝑐[ var , cvar ] (τ₃ ⇒ τ₃) τ₂
+    CPSApp : {τ₁ τ₂ τ₃ τ₄ τ₅ : cpstyp} →
              cpsvalue𝑐[ var , cvar ] (τ₂ ⇒[ τ₁ ⇒ τ₃ ]⇒ τ₄) →
              cpsvalue𝑐[ var , cvar ] τ₂ →
-             cpscont𝑐[ var , cvar ] (τ₅ ⇒ τ₆) (τ₁ ⇒ τ₃) →
-             cpsterm𝑐[ var , cvar ] (τ₅ ⇒ τ₆) τ₄
-    CPSRetE : {τ₀ τ₁ τ₂ τ₃ τ₄ : cpstyp} →
-             cpscont𝑐[ var , cvar ] (τ₃ ⇒ τ₄) (τ₁ ⇒ τ₂) →
+             cpscont𝑐[ var , cvar ] (τ₅ ⇒ τ₅) (τ₁ ⇒ τ₃) →
+             cpsterm𝑐[ var , cvar ] (τ₅ ⇒ τ₅) τ₄
+    CPSRetE : {τ₀ τ₁ τ₂ τ₃ : cpstyp} →
+             cpscont𝑐[ var , cvar ] (τ₃ ⇒ τ₃) (τ₁ ⇒ τ₂) →
              cpsterm𝑐[ var , cvar ] (τ₀ ⇒ τ₀) τ₁ →
-             cpsterm𝑐[ var , cvar ] (τ₃ ⇒ τ₄) τ₂
-             
+             cpsterm𝑐[ var , cvar ] (τ₃ ⇒ τ₃) τ₂
+
+{-
 -- 値と継続の代入規則
 mutual
   data cpsSubstVal𝑐 {var : cpstyp → Set} {cvar : cpstyp → conttyp → Set} : {τ τ₁ α β γ δ : cpstyp} →
@@ -119,7 +120,7 @@ mutual
                      cpsvalue𝑐[ var , cvar ] τ →
                      cpscont𝑐[ var , cvar ] (γ ⇒ δ) (α ⇒ β) → 
                      cpscont𝑐[ var , cvar ] (τ₆ ⇒ τ₇) (τ₄ ⇒ τ₅) → Set where
-    sKVar= : {τ α β γ δ : cpstyp} {v : cpsvalue𝑐[ var , cvar ] τ} {c : cpscont𝑐[ var , cvar ] (β ⇒ β) (τ ⇒ β)} →
+    sKVar= : {τ α β γ δ : cpstyp} {v : cpsvalue𝑐[ var , cvar ] τ} {c : cpscont𝑐[ var , cvar ] (τ ⇒ β) (τ ⇒ β)} →
              cpsSubstCont𝑐 (λ _ k → CPSKVar k) v c c
     sKVar≠ : {τ α β τ₁ τ₂ : cpstyp}
              {v : cpsvalue𝑐[ var , cvar ] τ}
@@ -242,4 +243,4 @@ mutual
                   cpsReduce e₂ e₃ →
                   cpsReduce e₁ e₃
 
-
+-}
