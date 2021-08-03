@@ -1,7 +1,5 @@
 module DStermK where
 
-open import DSterm
-
 open import Data.Nat
 
 -- type
@@ -9,18 +7,30 @@ data typ𝑘 : Set where
   Nat          : typ𝑘
   Boolean      : typ𝑘
   _⇒_cps[_,_]  : typ𝑘 → typ𝑘 → typ𝑘 → typ𝑘 → typ𝑘
-  -- _⇒_cps[τ,τ] : typ𝑘 → typ𝑘 → typ𝑘
 
 data typ𝑘𝑐 : Set where
-  _⇒_ : typ𝑘 → typ𝑘 → typ𝑘𝑐
+  _⇒_cps[_] : typ𝑘 → typ𝑘 → typ𝑘 → typ𝑘𝑐
+
+kerT : typ𝑘𝑐 → typ𝑘
+kerT (τ₁ ⇒ τ₂ cps[ τ ]) = τ₁ ⇒ τ₂ cps[ τ , τ ]
 
 -- source kernel term
 mutual
+
+  data root𝑘[_]_cps[_,_] (var : typ𝑘 → Set) : typ𝑘 → typ𝑘 → typ𝑘 → Set where
+    Root : {τ τ₁ τ₃ τ₄ : typ𝑘} →
+           (v₁ : value𝑘[ var ]
+             (((τ₁ ⇒ τ₃ cps[ τ , τ ]) ⇒ τ₃ cps[ τ₃ , τ₄ ])
+               ⇒ τ₁ cps[ τ₃ , τ₄ ]) cps[τ,τ]) →
+           (v₂ : var (τ₁ ⇒ τ₃ cps[ τ , τ ]) → nonvalue𝑘[ var ] τ₃ cps[ τ₃ , τ₄ ]) →
+           root𝑘[ var ] τ₁ cps[ τ₃ , τ₄ ]
+           
   data value𝑘[_]_cps[τ,τ] (var : typ𝑘 → Set) : typ𝑘 → Set where
     Num   : ℕ → value𝑘[ var ] Nat cps[τ,τ]
     Var   : {τ₁ : typ𝑘} → var τ₁ → value𝑘[ var ] τ₁ cps[τ,τ]
-    Fun   : (τ₁ τ₂ {τ₃ τ₄} : typ𝑘) →
-            (var τ₂ → term𝑘[ var ] τ₁ cps[ τ₃ , τ₄ ]) →
+    Fun   : (τ τ₁ τ₂ {τ₃ τ₄} : typ𝑘) →
+            (var τ₂ → var (kerT (τ₁ ⇒ τ₃ cps[ τ ])) → term𝑘[ var ] τ₃ cps[ τ₃ , τ₄ ]) → 
+            -- (var τ₂ → var (τ₁ ⇒ τ₃ cps[ τ , τ ]) → term𝑘[ var ] τ₃ cps[ τ₃ , τ₄ ]) → 
             value𝑘[ var ] (τ₂ ⇒ τ₁ cps[ τ₃ , τ₄ ]) cps[τ,τ]
     Shift : {τ τ₁ τ₂ τ₃ τ₄ : typ𝑘} →
             value𝑘[ var ]
@@ -37,37 +47,57 @@ mutual
             term𝑘[ var ] τ₁ cps[ τ₁ , τ₂ ] →
             nonvalue𝑘[ var ] τ₂ cps[ τ₃ , τ₃ ]
 
+-- kがresetまでのコンテキストを全部含んでいるので、pcontext𝑘の外側の継続はidentity
+-- τ₅ を τ₄ にした
   data term𝑘[_]_cps[_,_] (var : typ𝑘 → Set) : typ𝑘 → typ𝑘 → typ𝑘 → Set where
-    Val    : {τ₁ τ₂ τ₄ τ₅ : typ𝑘} →
+    Val    : {τ₁ τ₂ τ₄ : typ𝑘} →
              pcontext𝑘[ var , τ₁ cps[ τ₂ , τ₂ ]] τ₄
-                     cps[ τ₅ , τ₂ ] →
+                     cps[ τ₄ , τ₂ ] →
              value𝑘[ var ] τ₁ cps[τ,τ] →
-             term𝑘[ var ] τ₄ cps[ τ₅ , τ₂ ]
-    NonVal : {τ₁ τ₂ τ₃ τ₄ τ₅ : typ𝑘} →
+             term𝑘[ var ] τ₄ cps[ τ₄ , τ₂ ]
+    NonVal : {τ₁ τ₂ τ₃ τ₄ : typ𝑘} →
              pcontext𝑘[ var , τ₁ cps[ τ₂ , τ₃ ]] τ₄
-                     cps[ τ₅ , τ₃ ] →
+                     cps[ τ₄ , τ₃ ] →
              nonvalue𝑘[ var ] τ₁ cps[ τ₂ , τ₃ ] →
-             term𝑘[ var ] τ₄ cps[ τ₅ , τ₃ ] 
+             term𝑘[ var ] τ₄ cps[ τ₄ , τ₃ ] 
 
   data pframe𝑘[_,_cps[_,_]]_cps[_,_] (var : typ𝑘 → Set)
        : typ𝑘 → typ𝑘 → typ𝑘 → typ𝑘 → typ𝑘 → typ𝑘 → Set where
-    App₂ : {τ₁ τ₂ τ₃ τ₄ τ₅ : typ𝑘} →
-           (v₁ : value𝑘[ var ] (τ₂ ⇒ τ₁ cps[ τ₃ , τ₄ ]) cps[τ,τ]) →
-           pframe𝑘[ var , τ₂ cps[ τ₄ , τ₅ ]] τ₁ cps[ τ₃ , τ₅ ]
+    -- App₂ : {τ₁ τ₂ τ₃ τ₄ τ₅ : typ𝑘} →
+    --        (v₁ : value𝑘[ var ] (τ₂ ⇒ τ₁ cps[ τ₃ , τ₄ ]) cps[τ,τ]) →
+    --        pframe𝑘[ var , τ₂ cps[ τ₄ , τ₅ ]] τ₁ cps[ τ₃ , τ₅ ]
+    App₂ : {τ₁ τ₂ τ₃ τ₅ : typ𝑘} →
+           (v₁ : var (τ₂ ⇒ τ₁ cps[ τ₃ , τ₃ ])) →
+           pframe𝑘[ var , τ₂ cps[ τ₃ , τ₅ ]] τ₁ cps[ τ₃ , τ₅ ]
     Let  : {τ₁ τ₂ α β γ : typ𝑘} →
            (e₂ : var τ₁ → term𝑘[ var ] τ₂ cps[ α , β ]) →
            pframe𝑘[ var , τ₁ cps[ β , γ ]] τ₂ cps[ α , γ ]
+    -- Let  : {τ₁ τ₂ β γ : typ𝑘} →
+    --        (e₂ : var τ₁ → term𝑘[ var ] τ₂ cps[ τ₂ , β ]) →
+    --        pframe𝑘[ var , τ₁ cps[ β , γ ]] τ₂ cps[ τ₂ , γ ]
 
+  -- data pcontext𝑘[_,_cps[_,_]]_cps[_,_] (var : typ𝑘 → Set)
+  --      : typ𝑘 → typ𝑘 → typ𝑘 → typ𝑘 → typ𝑘 → typ𝑘 → Set where
+  --   Hole  : {τ₁ τ₂ τ₃ : typ𝑘} →
+  --           pcontext𝑘[ var , τ₁ cps[ τ₂ , τ₃ ]] τ₁ cps[ τ₂ , τ₃ ]
+  --   Frame : {τ₁ τ₂ τ₃ τ₄ τ₅ τ₆ τ₇ τ₈ τ₉ : typ𝑘} →
+  --           (f : pframe𝑘[ var , τ₄ cps[ τ₅ , τ₆ ]] τ₇
+  --                    cps[ τ₈ , τ₉ ]) →
+  --           (e : pcontext𝑘[ var , τ₁ cps[ τ₂ , τ₃ ]] τ₄
+  --                      cps[ τ₅ , τ₆ ]) →
+  --           pcontext𝑘[ var , τ₁ cps[ τ₂ , τ₃ ]] τ₇ cps[ τ₈ , τ₉ ]
+  
+-- τは、帰納的に同じになる
   data pcontext𝑘[_,_cps[_,_]]_cps[_,_] (var : typ𝑘 → Set)
        : typ𝑘 → typ𝑘 → typ𝑘 → typ𝑘 → typ𝑘 → typ𝑘 → Set where
     Hole  : {τ₁ τ₂ τ₃ : typ𝑘} →
             pcontext𝑘[ var , τ₁ cps[ τ₂ , τ₃ ]] τ₁ cps[ τ₂ , τ₃ ]
-    Frame : {τ₁ τ₂ τ₃ τ₄ τ₅ τ₇ τ₈ τ₉ : typ𝑘} →
-            (f : pframe𝑘[ var , τ₄ cps[ τ₅ , τ₃ ]] τ₇
-                     cps[ τ₈ , τ₉ ]) →
-            (e : pcontext𝑘[ var , τ₁ cps[ τ₂ , τ₃ ]] τ₄
-                       cps[ τ₅ , τ₃ ]) →
-            pcontext𝑘[ var , τ₁ cps[ τ₂ , τ₃ ]] τ₇ cps[ τ₈ , τ₉ ]
+    Frame : {τ τ₁ τ₂ τ₇ τ₈ : typ𝑘} →
+            (f : pframe𝑘[ var , τ₁ cps[ τ₂ , τ ]] τ₇
+                     cps[ τ₈ , τ ]) →
+            (e : pcontext𝑘[ var , τ₁ cps[ τ₂ , τ ]] τ₁
+                       cps[ τ₂ , τ ]) →
+            pcontext𝑘[ var , τ₁ cps[ τ₂ , τ ]] τ₇ cps[ τ₈ , τ ]
 
 -- data same-pframe𝑘 {var : typ𝑘 → Set} :
 --                  {τ₁ τ₁' τ₂ τ₂' τ₃ τ₃' τ₄ τ₄' τ₅ τ₅' τ₆ τ₆' : typ𝑘} →
