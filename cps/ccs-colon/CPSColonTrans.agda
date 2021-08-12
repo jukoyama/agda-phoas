@@ -16,14 +16,14 @@ cpsT (τ₂ ⇒ τ₁ cps[ τ₃ , τ₄ ]) =
 -- CPS transformation to target term
 
 mutual
-  cpsMain𝑐 : (τ₁ τ₂ τ₃ : typ) → {var : cpstyp → Set} {cvar : cpstyp → conttyp → Set} →
+  cpsMain𝑐 : (τ₁ τ₂ τ₃ : typ) → {var : cpstyp → Set} →
              term[ var ∘ cpsT ] τ₁ cps[ τ₂ , τ₃ ] →
-             (cvar (cpsT τ₂) (cpsT τ₁ ⇒ cpsT τ₂) → cpsterm𝑐[ var , cvar ] (cpsT τ₂ ⇒ cpsT τ₂) (cpsT τ₃))
+             (var (cpsT τ₁ ⇒[ cpsT τ₂ ⇒ cpsT τ₂ ]⇒ cpsT τ₂) → cpsterm𝑐[ var ] (cpsT τ₂ ⇒ cpsT τ₂) (cpsT τ₃))
   cpsMain𝑐 τ₁ τ₂ τ₃ e = λ k → cpsE𝑐 τ₁ τ₂ τ₃ τ₂ e (CPSKVar k)
 
-  cpsV𝑐 : (τ₁ : typ) → {var : cpstyp → Set} {cvar : cpstyp → conttyp → Set} →
+  cpsV𝑐 : (τ₁ : typ) → {var : cpstyp → Set} →
           value[ var ∘ cpsT ] τ₁ cps[τ,τ] →
-          cpsvalue𝑐[ var , cvar ] (cpsT τ₁)
+          cpsvalue𝑐[ var ] (cpsT τ₁)
   cpsV𝑐 .Nat (Num n) = CPSNum n
   cpsV𝑐 τ₁  (Var v) = CPSVar v
   cpsV𝑐 .(τ₂ ⇒ τ₁ cps[ τ₃ , τ₄ ]) (Fun τ₁ τ₂ {τ₃ = τ₃} {τ₄ = τ₄} e) =
@@ -33,10 +33,10 @@ mutual
         (Shift {τ = τ} {τ₁ = τ₁} {τ₂ = τ₂} {τ₃ = τ₃} {τ₄ = τ₄}) = CPSShift
 
   -- M : K
-  cpsE𝑐 : (τ₁ τ₂ τ₃ τ₄ : typ) → {var : cpstyp → Set} {cvar : cpstyp → conttyp → Set} →
+  cpsE𝑐 : (τ₁ τ₂ τ₃ τ₄ : typ) → {var : cpstyp → Set} →
           term[ var ∘ cpsT ] τ₁ cps[ τ₂ , τ₃ ] →
-          cpscont𝑐[ var , cvar ] (cpsT τ₄ ⇒ cpsT τ₄) (cpsT τ₁ ⇒ cpsT τ₂) →
-          cpsterm𝑐[ var , cvar ] (cpsT τ₄ ⇒ cpsT τ₄) (cpsT τ₃)
+          cpscont𝑐[ var ] (cpsT τ₄ ⇒ cpsT τ₄) (cpsT τ₁ ⇒ cpsT τ₂) →
+          cpsterm𝑐[ var ] (cpsT τ₄ ⇒ cpsT τ₄) (cpsT τ₃)
 
   -- V : K
   cpsE𝑐 τ₁ τ₂ .τ₂ τ₄ (Val {τ₁ = .τ₁} {τ₂ = .τ₂} v) κ = CPSRet κ (cpsV𝑐 τ₁ v)
