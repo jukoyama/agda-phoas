@@ -47,6 +47,8 @@ mutual
              nonvalue[ var ] τ₁ cps[ τ₂ , τ₃ ] →
              term[ var ] τ₁ cps[ τ₂ , τ₃ ]
 
+mutual 
+
 -- M[ v / x]
 -- substitution relation
 mutual
