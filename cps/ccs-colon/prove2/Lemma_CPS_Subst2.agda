@@ -7,31 +7,31 @@ open import CPSIsm2
 open import Function
 open import Relation.Binary.PropositionalEquality
 
-mutual
-  cpsSubstValV𝑐≠ : {var : cpstyp → Set} {τ₁ τ₂ : cpstyp} →
-                   {t : cpsvalue𝑐[ var ] τ₁} →
-                   {v : cpsvalue𝑐[ var ] τ₂} →
-                   cpsSubstValV𝑐 (λ y → t) v t
-  cpsSubstValV𝑐≠ {t = CPSVar v} = sVar≠
-  cpsSubstValV𝑐≠ {t = CPSNum n} = sNum
-  cpsSubstValV𝑐≠ {t = CPSFun e} = sFun (λ x₁ k → cpsSubstV𝑐≠)
-  cpsSubstValV𝑐≠ {t = CPSShift} = sShift
+-- mutual
+--   cpsSubstValV𝑐≠ : {var : cpstyp → Set} {τ₁ τ₂ : cpstyp} →
+--                    {t : cpsvalue𝑐[ var ] τ₁} →
+--                    {v : cpsvalue𝑐[ var ] τ₂} →
+--                    cpsSubstValV𝑐 (λ y → t) v t
+--   cpsSubstValV𝑐≠ {t = CPSVar v} = sVar≠
+--   cpsSubstValV𝑐≠ {t = CPSNum n} = sNum
+--   cpsSubstValV𝑐≠ {t = CPSFun e} = sFun (λ x₁ k → cpsSubstV𝑐≠)
+--   cpsSubstValV𝑐≠ {t = CPSShift} = sShift
 
-  cpsSubstContV𝑐≠ : {var : cpstyp → Set} {τ τ₁ τ₂ τ₃ : cpstyp} →
-                    {t : cpscont𝑐[ var ] (τ₃ ⇒ τ₃) (τ₁ ⇒ τ₂)} →
-                    {v : cpsvalue𝑐[ var ] τ} →
-                    cpsSubstContV𝑐 (λ y → t) v t
-  cpsSubstContV𝑐≠ {t = CPSKVar k} = sKVar≠
-  cpsSubstContV𝑐≠ {t = CPSId}     = sKId
-  cpsSubstContV𝑐≠ {t = CPSCont e} = sKFun (λ x → cpsSubstV𝑐≠)
+--   cpsSubstContV𝑐≠ : {var : cpstyp → Set} {τ τ₁ τ₂ τ₃ : cpstyp} →
+--                     {t : cpscont𝑐[ var ] (τ₃ ⇒ τ₃) (τ₁ ⇒ τ₂)} →
+--                     {v : cpsvalue𝑐[ var ] τ} →
+--                     cpsSubstContV𝑐 (λ y → t) v t
+--   cpsSubstContV𝑐≠ {t = CPSKVar k} = sKVar≠
+--   cpsSubstContV𝑐≠ {t = CPSId}     = sKId
+--   cpsSubstContV𝑐≠ {t = CPSCont e} = sKFun (λ x → cpsSubstV𝑐≠)
 
-  cpsSubstV𝑐≠ : {var : cpstyp → Set} {τ₁ τ₂ τ₃ : cpstyp} →
-                {t : cpsterm𝑐[ var ] (τ₃ ⇒ τ₃) τ₁} →
-                {v : cpsvalue𝑐[ var ] τ₂} →
-                cpsSubstV𝑐 (λ y → t) v t
-  cpsSubstV𝑐≠ {t = CPSRet k v}   = sRet cpsSubstContV𝑐≠ cpsSubstValV𝑐≠
-  cpsSubstV𝑐≠ {t = CPSApp v w k} = sApp cpsSubstValV𝑐≠ cpsSubstValV𝑐≠ cpsSubstContV𝑐≠
-  cpsSubstV𝑐≠ {t = CPSRetE k e}  = sRetE cpsSubstContV𝑐≠ cpsSubstV𝑐≠
+--   cpsSubstV𝑐≠ : {var : cpstyp → Set} {τ₁ τ₂ τ₃ : cpstyp} →
+--                 {t : cpsterm𝑐[ var ] (τ₃ ⇒ τ₃) τ₁} →
+--                 {v : cpsvalue𝑐[ var ] τ₂} →
+--                 cpsSubstV𝑐 (λ y → t) v t
+--   cpsSubstV𝑐≠ {t = CPSRet k v}   = sRet cpsSubstContV𝑐≠ cpsSubstValV𝑐≠
+--   cpsSubstV𝑐≠ {t = CPSApp v w k} = sApp cpsSubstValV𝑐≠ cpsSubstValV𝑐≠ cpsSubstContV𝑐≠
+--   cpsSubstV𝑐≠ {t = CPSRetE k e}  = sRetE cpsSubstContV𝑐≠ cpsSubstV𝑐≠
 
   -- cpsSubstVK𝑐≠ : {var : cpstyp → Set} {τ₁ τ₂ τ₃ α β γ : cpstyp} →
   --                {t : cpsterm𝑐[ var ] (τ₃ ⇒ τ₃) τ₁} →
@@ -67,6 +67,7 @@ mutual
                                     (cpsV𝑘 τ v)
                                     (cpsC𝑘 τ₁ τ₂ τ₃ τ₄ k₂)
   SubstConV𝑐 sConVar≠    = sKVar≠
+  SubstConV𝑐 sConId      = sKId
   SubstConV𝑐 (sConLet sub-e) = sKFun (λ x → SubstV𝑐 (sub-e x))
 
   SubstRootV𝑐 : {var : cpstyp → Set} {τ τ₁ τ₂ τ₃ : typ𝑘} →

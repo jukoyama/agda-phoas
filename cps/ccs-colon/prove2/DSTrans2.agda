@@ -37,7 +37,7 @@ mutual
        (CPSShift {τ₁ = τ₁} {τ₂ = τ₂} {τ₃ = τ₃} {τ₄ = τ₄} {τ₅ = τ₅}) = Shift
 
   dsC𝑐 : (τ₁ τ₂ τ₃ τ₅ : cpstyp) → {var : typ𝑘 → Set} →
-         cpscont𝑐[ var ∘ dsT ] (τ₅ ⇒ τ₅) (τ₁ ⇒ τ₂) →
+         cpscont𝑐[ var ∘ dsT ] (τ₅ ⇒ τ₅) τ₃ (τ₁ ⇒ τ₂) →
          pcontext𝑘[ var , dsT τ₁ cps[ dsT τ₂ , dsT τ₃ ]] dsT τ₅
                  cps[ dsT τ₅ , dsT τ₃ ]
   dsC𝑐 τ₁ τ₂ τ₃ .τ₂  (CPSKVar {τ₁ = .τ₁} {τ₂ = .τ₂} k) = KHole k
