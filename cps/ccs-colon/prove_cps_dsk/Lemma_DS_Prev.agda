@@ -58,6 +58,18 @@ correctTermId𝑘 {var} {τ₃} {τ₅}
                (βShift𝑐 {τ₁ = τ₁} {τ₂ = .τ₃} {τ₃ = τ₄} {τ₄ = .τ₅} {w = w} {j = j}) =
   βShift {τ₂ = dsT τ₃}
 
+correctTermId𝑘𝑆 : {var : typ𝑘 → Set} → {τ₂ : cpstyp} →
+                  {e : cpsterm𝑐[ var ∘ dsT ] (τ₂ ⇒ τ₂) τ₂} →
+                  {v : cpsvalue𝑐[ var ∘ dsT ] τ₂} →
+                  cpsReduce𝑅 e v →
+                  ReduceTerm𝑘𝑅 {var}
+                    (NonVal Hole (Reset (dsT τ₂) (dsT τ₂) (dsT τ₂) (dsE𝑐 τ₂ τ₂ e)))
+                    (dsV𝑐 τ₂ v)
+correctTermId𝑘𝑆 {var} {τ₂}
+                {.(CPSRet {_} {τ₂} {τ₂} {τ₂} (CPSId {_} {τ₂} {τ₂}) v)}
+                {v}
+                (βReset𝑐 {τ₁ = .τ₂} {v = .v}) =
+  βReset
 
 correctVal𝑘 : {var : typ𝑘 → Set} → {τ₁ : cpstyp} →
               {v  : cpsvalue𝑐[ var ∘ dsT ] τ₁} →

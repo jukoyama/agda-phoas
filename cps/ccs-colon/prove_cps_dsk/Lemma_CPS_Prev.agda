@@ -55,6 +55,19 @@ correctTerm𝑐𝑠 {var} {τ₁} {τ₂} {τ₃}
               (βShift {τ = τ} {τ₁ = .τ₂} {τ₂ = τ₄} {τ₃ = τ₅} {τ₄ = .τ₃} {τ₅ = .τ₂}
                       {K𝑐 = K𝑐} {w = w}) =
   βShift𝑐
+
+correctTerm𝑐𝑅 : {var : cpstyp → Set} → {τ₂ : typ𝑘} →
+                {e : term𝑘[ var ∘ cpsT𝑘 ] τ₂ cps[ τ₂ , τ₂ ]} →
+                {v : value𝑘[ var ∘ cpsT𝑘 ] τ₂ cps[τ,τ]} → 
+                ReduceTerm𝑘𝑅 (NonVal Hole (Reset τ₂ τ₂ τ₂ e))
+                             v → 
+                cpsReduce𝑅 {var} (cpsE𝑘 τ₂ τ₂ e)
+                                 (cpsV𝑘 τ₂ v)
+correctTerm𝑐𝑅 {var} {τ₂}
+              {.(Val {_} {τ₂} {τ₂} {τ₂}
+              (Hole {_} {τ₂} {τ₂}) v)} {v}
+              (βReset {τ₁ = .τ₂} {v = .v}) =
+  βReset𝑐
   
 correctVal𝑐 : {var : cpstyp → Set} → {τ₁ : typ𝑘} →
               {v  : value𝑘[ var ∘ cpsT𝑘 ] τ₁ cps[τ,τ]} → 

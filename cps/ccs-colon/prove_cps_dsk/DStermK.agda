@@ -275,14 +275,6 @@ data ReduceRoot𝑘 {var : typ𝑘 → Set} :
                 (Root (λ k → NonVal K𝑐 (App (Fun τ₁ τ₂ (λ x → Root λ k′ → e x k′))
                                             v)))
                           (Root (λ k → e′))
-     RTrans𝑘 : {τ₁ τ₂ τ₃ : typ𝑘} →
-               (e₁ e₂ e₃ : root𝑘[ var ] τ₁ cps[ τ₂ , τ₃ ]) →
-               ReduceRoot𝑘 e₁ e₂ →
-               ReduceRoot𝑘 e₂ e₃ →
-               ReduceRoot𝑘 e₁ e₃
-     RId𝑘    : {τ₁ τ₂ τ₃ : typ𝑘} →
-               {e : root𝑘[ var ] τ₁ cps[ τ₂ , τ₃ ]} →
-               ReduceRoot𝑘 e e
 
 data ReduceTerm𝑘 {var : typ𝑘 → Set} :
                  {τ₂ τ₃ : typ𝑘} →
@@ -311,6 +303,16 @@ data ReduceTerm𝑘𝑠 {var : typ𝑘 → Set} :
                       (Fun τ₄ τ₃
                       (λ y → Root (λ k → NonVal (KHole k)
                              (Reset τ₅ τ₄ τ (Val K𝑐 (Var y))))))))))
+
+data ReduceTerm𝑘𝑅 {var : typ𝑘 → Set} :
+                  {τ₂ : typ𝑘} →
+                  term𝑘[ var ] τ₂ cps[ τ₂ , τ₂ ] →
+                  value𝑘[ var ] τ₂ cps[τ,τ] → Set where
+     βReset : {τ₁ : typ𝑘} →
+               {v : value𝑘[ var ] τ₁ cps[τ,τ]} →
+               ReduceTerm𝑘𝑅 (NonVal Hole (Reset τ₁ τ₁ τ₁ (Val Hole v)))
+                            v
+                    
 
 data ReduceVal𝑘 {var : typ𝑘 → Set} :
                  {τ₁ : typ𝑘} →

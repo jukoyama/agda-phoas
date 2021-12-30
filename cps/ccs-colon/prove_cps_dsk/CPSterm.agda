@@ -266,6 +266,13 @@ data cpsReduce• {var : cpstyp → Set} :
                 cpsReduce• (CPSApp CPSShift w j)
                            (CPSApp w (CPSFun (λ x k → CPSRetE (CPSKVar k) (CPSRet j (CPSVar x)))) CPSId)
 
+data cpsReduce𝑅 {var : cpstyp → Set} :
+                {τ₂ : cpstyp} →
+                cpsterm𝑐[ var ] (τ₂ ⇒ τ₂) τ₂ →
+                cpsvalue𝑐[ var ] τ₂ → Set where
+     βReset𝑐 : {τ₁ : cpstyp} →
+               {v : cpsvalue𝑐[ var ] τ₁} →
+               cpsReduce𝑅 (CPSRet CPSId v) v
 
 data cpsReduceV {var : cpstyp → Set}  :
                  {τ₁ : cpstyp} →
