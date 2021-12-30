@@ -8,11 +8,14 @@ open import CPSIsm
 open import DSTrans
 
 open import Function
-open import Relation.Binary.PropositionalEquality
+open import Relation.Binary.PropositionalEquality hiding (Extensionality)
 open import Data.Product
 
 open import Agda.Builtin.Equality
 open import Agda.Builtin.Equality.Rewrite
+
+open import Level using (Level)
+open import Axiom.Extensionality.Propositional
 
 dsT∘cpsT𝑘≡id : (τ : typ𝑘) → dsT (cpsT𝑘 τ) ≡ τ
 dsT∘cpsT𝑘≡id Nat = refl
@@ -34,6 +37,9 @@ dsT∘cpsT𝑘≡id (τ ⇒ τ₁ cps[ τ₂ , τ₃ ]) = begin
   ∎
   where open ≡-Reasoning
 
+postulate
+  extensionality : {a b : Level} → Extensionality a b
+
 {-# REWRITE dsT∘cpsT𝑘≡id #-}
 mutual
   Left-InvR : {var : typ𝑘 → Set} → {τ₁ τ₂ τ₃ : typ𝑘} →
@@ -44,9 +50,9 @@ mutual
   Left-InvR {var} {τ₁} {τ₂} {τ₃} (Root e) =
     begin
       Root (λ k → e k)
-    ≡⟨ cong Root {!!} ⟩
+    ≡⟨ cong Root (extensionality (λ k → Left-InvE (e k))) ⟩
       Root (λ k → dsE𝑐 (cpsT𝑘 τ₃) (cpsT𝑘 τ₂) (cpsE𝑘 τ₃ τ₂ (e k)))
-    ≡⟨ {!!} ⟩
+    ≡⟨ refl ⟩
       dsMain𝑐 (cpsT𝑘 τ₁) (cpsT𝑘 τ₂) (cpsT𝑘 τ₃) (cpsMain𝑘 τ₁ τ₂ τ₃ (Root (λ k → e k)))
     ∎
     where open ≡-Reasoning
@@ -119,9 +125,10 @@ mutual
             (Fun τ₁ τ₂ {τ₃ = τ₃} {τ₄ = τ₄} r) =
     begin
       Fun τ₁ τ₂ (λ x → r x)
-    ≡⟨ cong (Fun τ₁ τ₂) {!!} ⟩
-      Fun τ₁ τ₂ {!!}
-    ≡⟨ {!!} ⟩
+    ≡⟨ cong (Fun τ₁ τ₂) (extensionality (λ x → Left-InvR (r x))) ⟩
+      Fun τ₁ τ₂
+          (λ x → dsMain𝑐 (cpsT𝑘 τ₁) (cpsT𝑘 τ₃) (cpsT𝑘 τ₄) (cpsMain𝑘 τ₁ τ₃ τ₄ (r x)))
+    ≡⟨ refl ⟩
       dsV𝑐 (cpsT𝑘 (τ₂ ⇒ τ₁ cps[ τ₃ , τ₄ ]))
            (cpsV𝑘 (τ₂ ⇒ τ₁ cps[ τ₃ , τ₄ ]) (Fun τ₁ τ₂ (λ x → r x)))
     ∎
@@ -143,7 +150,7 @@ mutual
             (KLet {τ₁ = .τ₁} {τ₂ = .τ₅} {β = .τ₂} {γ = .τ₃} e₂) =
     begin
       KLet (λ x → e₂ x)
-    ≡⟨ cong KLet {!!} ⟩
+    ≡⟨ cong KLet (extensionality (λ x → Left-InvE (e₂ x))) ⟩
       dsC𝑐 (cpsT𝑘 τ₁) (cpsT𝑘 τ₂) (cpsT𝑘 τ₃) (cpsT𝑘 τ₅)
         (cpsC𝑘 τ₁ τ₂ τ₃ τ₅ (KLet e₂))
     ≡⟨ refl ⟩
