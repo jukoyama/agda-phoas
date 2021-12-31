@@ -21,7 +21,7 @@ mutual
   SubstValV𝑐 SubstValV𝑘.sNum  = cpsSubstValV𝑐.sNum
   SubstValV𝑐 SubstValV𝑘.sShift = cpsSubstValV𝑐.sShift
   SubstValV𝑐 (SubstValV𝑘.sFun sub) =
-    sFun (λ x k → SubstRootV𝑐 k (sub x))
+    sFun (λ x k → SubstV𝑐 (sub x k))
 
   SubstConV𝑐 : {var : cpstyp → Set} {τ τ₁ τ₂ τ₃ τ₄ : typ𝑘} →
                {k₁ : var (cpsT𝑘 τ) → pcontext𝑘[ var ∘ cpsT𝑘 , τ₁ cps[ τ₂ , τ₃ ]] τ₄
@@ -36,18 +36,6 @@ mutual
   SubstConV𝑐 sConVar≠    = sKVar≠
   SubstConV𝑐 sConId      = sKId
   SubstConV𝑐 (sConLet sub-e) = sKFun (λ x → SubstV𝑐 (sub-e x))
-
-  SubstRootV𝑐 : {var : cpstyp → Set} {τ τ₁ τ₂ τ₃ : typ𝑘} →
-                (k  : var (cpsT𝑘 τ₁ ⇒[ cpsT𝑘 τ₂ ⇒ cpsT𝑘 τ₂ ]⇒ cpsT𝑘 τ₂)) → 
-                {e₁ : var (cpsT𝑘 τ) →
-                      root𝑘[ var ∘ cpsT𝑘 ] τ₁ cps[ τ₂ , τ₃ ]} →
-                {e₂ : root𝑘[ var ∘ cpsT𝑘 ] τ₁ cps[ τ₂ , τ₃ ]} →
-                {v  : value𝑘[ var ∘ cpsT𝑘 ] τ cps[τ,τ]} →
-                SubstRootV𝑘 e₁ v e₂ →
-                cpsSubstV𝑐 {var} (λ y → cpsMain𝑘 τ₁ τ₂ τ₃ (e₁ y) k)
-                                 (cpsV𝑘 τ v)
-                                 (cpsMain𝑘 τ₁ τ₂ τ₃ e₂ k)
-  SubstRootV𝑐 k (sRoot sub) = SubstV𝑐 (sub k)
 
   SubstV𝑐 : {var : cpstyp → Set} {τ τ₂ τ₃ : typ𝑘} →
             {e₁ : var (cpsT𝑘 τ) →

@@ -16,19 +16,21 @@ cpsT𝑘 (τ₂ ⇒ τ₁ cps[ τ₃ , τ₄ ]) =
 -- CPS transforamtion to target term
 
 mutual
-  cpsMain𝑘 : {var : cpstyp → Set} → (τ₁ τ₂ τ₃ : typ𝑘) →
-             root𝑘[ var ∘ cpsT𝑘 ] τ₁ cps[ τ₂ , τ₃ ] →
-             (var (cpsT𝑘 τ₁ ⇒[ cpsT𝑘 τ₂ ⇒ cpsT𝑘 τ₂ ]⇒ cpsT𝑘 τ₂) →
-               cpsterm𝑐[ var ] (cpsT𝑘 τ₂ ⇒ cpsT𝑘 τ₂) (cpsT𝑘 τ₃))
-  cpsMain𝑘 τ₁ τ₂ τ₃ (Root e) = λ k → cpsE𝑘 τ₃ τ₂ (e k)
+  cpsMain𝑘 : {var : cpstyp → Set} → (τ τ₁ τ₂ τ₃ τ₄ : typ𝑘) →
+             ((var ∘ cpsT𝑘) (τ₁ ⇒ τ₃ cps[ τ , τ ]) →
+               term𝑘[ var ∘ cpsT𝑘 ] τ₂ cps[ τ₂ , τ₄ ]) →
+             (var (cpsT𝑘 τ₁ ⇒[ cpsT𝑘 τ₃ ⇒ cpsT𝑘 τ ]⇒ cpsT𝑘 τ) →
+               cpsterm𝑐[ var ] (cpsT𝑘 τ₂ ⇒ cpsT𝑘 τ₂) (cpsT𝑘 τ₄))
+  cpsMain𝑘 τ τ₁ τ₂ τ₃ τ₄ r = λ k → cpsE𝑘 τ₄ τ₂ (r k)
+  -- cpsMain𝑘 τ₁ τ₂ τ₃ (Root e) = λ k → cpsE𝑘 τ₃ τ₂ (e k)
   
   cpsV𝑘 : {var : cpstyp → Set} → (τ₁ : typ𝑘) →
           value𝑘[ var ∘ cpsT𝑘 ] τ₁ cps[τ,τ] →
           cpsvalue𝑐[ var ] (cpsT𝑘 τ₁)
   cpsV𝑘 .Nat (Num n) = CPSNum n
   cpsV𝑘 τ₁ (Var {τ₁ = .τ₁} v) = CPSVar v
-  cpsV𝑘 .(τ₂ ⇒ τ₁ cps[ τ₃ , τ₄ ]) (Fun τ₁ τ₂ {τ₃ = τ₃} {τ₄ = τ₄} e) = 
-    CPSFun (λ x → cpsMain𝑘 τ₁ τ₃ τ₄ (e x))
+  cpsV𝑘 .(τ₄ ⇒ τ₁ cps[ τ₃ , τ₄ ]) (Fun τ τ₁ τ₂ {τ₃ = τ₃} {τ₄ = τ₄} e) =
+    CPSFun (λ x → cpsMain𝑘 τ τ₁ τ₂ τ₃ τ₄ (e x))
   cpsV𝑘 {var} .(((τ₃ ⇒ τ₄ cps[ τ , τ ]) ⇒ τ₁ cps[ τ₁ , τ₂ ]) ⇒ τ₃ cps[ τ₄ , τ₂ ])
               (Shift {τ = τ} {τ₁ = τ₁} {τ₂ = τ₂} {τ₃ = τ₃} {τ₄ = τ₄}) = CPSShift
   

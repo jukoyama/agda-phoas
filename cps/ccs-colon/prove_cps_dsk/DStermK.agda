@@ -25,11 +25,11 @@ mutual
   data value𝑘[_]_cps[τ,τ] (var : typ𝑘 → Set) : typ𝑘 → Set where
     Num   : ℕ → value𝑘[ var ] Nat cps[τ,τ]
     Var   : {τ₁ : typ𝑘} → var τ₁ → value𝑘[ var ] τ₁ cps[τ,τ]
-    Fun   : (τ₁ τ₂ {τ₃ τ₄} : typ𝑘) →
+    Fun   : (τ τ₁ τ₂ {τ₃ τ₄} : typ𝑘) →
             -- (var τ₂ → var (τ₁ ⇒ τ₃ cps[ τ , τ ]) → term𝑘[ var ] τ₃ cps[ τ₃ , τ₄ ]) →
-            (var τ₂ → root𝑘[ var ] τ₁ cps[ τ₃ , τ₄ ]) →
-            -- (var τ₂ → term𝑘[ var ] τ₃ cps[ τ₃ , τ₄ ]) → 
-            value𝑘[ var ] (τ₂ ⇒ τ₁ cps[ τ₃ , τ₄ ]) cps[τ,τ]
+            (var τ₄ → var (τ₁ ⇒ τ₃ cps[ τ , τ ]) → term𝑘[ var ] τ₂ cps[ τ₂ , τ₄ ]) →
+            -- (var τ₂ → root𝑘[ var ] τ₁ cps[ τ₃ , τ₄ ]) →
+            value𝑘[ var ] (τ₄ ⇒ τ₁ cps[ τ₃ , τ₄ ]) cps[τ,τ]
     Shift : {τ τ₁ τ₂ τ₃ τ₄ : typ𝑘} →
             value𝑘[ var ]
              (((τ₃ ⇒ τ₄ cps[ τ , τ ]) ⇒ τ₁ cps[ τ₁ , τ₂ ])
@@ -97,14 +97,17 @@ mutual
            SubstValV𝑘 (λ _ → Num n) v (Num n)
     sShift : {τ τ₁ τ₂ τ₃ τ₄ τ₅ : typ𝑘} {v : value𝑘[ var ] τ₅ cps[τ,τ]} →
            SubstValV𝑘 (λ _ → Shift {τ = τ} {τ₁} {τ₂} {τ₃} {τ₄}) v Shift
-    sFun   : {τ τ₁ τ₂ τ₃ τ₄ : typ𝑘} →
-             {e₁  : var τ₁ → var τ → root𝑘[ var ] τ₂ cps[ τ₃ , τ₄ ]} →
-             {v   : value𝑘[ var ] τ₁ cps[τ,τ]} →
-             {e₁′ : var τ → root𝑘[ var ] τ₂ cps[ τ₃ , τ₄ ]} →
-             ((x : var τ) → SubstRootV𝑘 (λ y → (e₁ y) x) v (e₁′ x)) →
-             SubstValV𝑘 (λ y → Fun τ₂ τ (e₁ y))
-                        v
-                        (Fun τ₂ τ e₁′)
+    sFun   : {τ τ₀ τ₁ τ₂ τ₃ τ₄ : typ𝑘} →
+             {e₁  : var τ → var τ₄ → var (τ₁ ⇒ τ₃ cps[ τ₀ , τ₀ ]) → 
+                    term𝑘[ var ] τ₂ cps[ τ₂ , τ₄ ]} →
+             {v   : value𝑘[ var ] τ cps[τ,τ]} →
+             {e₁′ : var τ₄ → var (τ₁ ⇒ τ₃ cps[ τ₀ , τ₀ ]) →
+                    term𝑘[ var ] τ₂ cps[ τ₂ , τ₄ ]} →
+             ((x : var τ₄) → (k : var (τ₁ ⇒ τ₃ cps[ τ₀ , τ₀ ])) →
+              SubstV𝑘 (λ y → (e₁ y) x k) v (e₁′ x k)) →
+             SubstValV𝑘 (λ y → Fun τ₀ τ₁ τ₂ (λ k → e₁ y k))
+                       v
+                       (Fun τ₀ τ₁ τ₂ e₁′)
 
   data SubstConV𝑘 {var : typ𝑘 → Set} : {τ τ₁ τ₂ τ₃ τ₄ : typ𝑘} →
                   (var τ → pcontext𝑘[ var , τ₁ cps[ τ₂ , τ₃ ]] τ₄
@@ -195,18 +198,11 @@ mutual
             {v  : value𝑘[ var ] τ cps[τ,τ]} → 
             {K𝑐 : pcontext𝑘[ var , α cps[ β , γ ]] ζ cps[ ζ , γ ]} → 
             SubstCon𝑘 {τ₁ = τ₁} {τ₃ = τ₃} (λ _ _ → Hole) v K𝑐 Hole
-    -- sLet  : {τ τ₁ τ₂ β γ α′ β′ γ′ ζ′ : typ𝑘} →
-    sLet  : {τ τ₁ τ₂ τ₃ τ₄ α β γ ζ : typ𝑘} →
-            -- {e  : var τ → var (α′ ⇒ β′ cps[ ζ′ , ζ′ ]) → (var τ₁ → term𝑘[ var ] τ₂ cps[ τ₂ , β ])} →
-            -- {v  : value𝑘[ var ] τ cps[τ,τ]} → 
-            -- {K𝑐 : pcontext𝑘[ var , α′ cps[ β′ , γ′ ]] ζ′ cps[ ζ′ , γ′ ]} →
-            -- {e′ : var τ₁ → term𝑘[ var ] τ₂ cps[ τ₂ , β ]} →
-            
+    sLet  : {τ τ₁ τ₂ τ₃ τ₄ α β γ ζ : typ𝑘} →            
             {e  : var τ → var (α ⇒ β cps[ ζ , ζ ]) → (var τ₁ → term𝑘[ var ] τ₄ cps[ τ₄ , τ₂ ])} →
             {v  : value𝑘[ var ] τ cps[τ,τ]} → 
             {K𝑐 : pcontext𝑘[ var , α cps[ β , γ ]] ζ cps[ ζ , γ ]} →
             {e′ : var τ₁ → term𝑘[ var ] τ₄ cps[ τ₄ , τ₂ ]} →
-
             ((x : var τ₁) → Subst𝑘 (λ y k′ → (e y k′) x) v K𝑐 (e′ x)) → 
             SubstCon𝑘 {τ₃ = τ₃} (λ y k′ → KLet (e y k′))
                                  v K𝑐
@@ -261,20 +257,24 @@ mutual
                     (NonVal k₂ (Reset τ₁ τ₂ τ₃ e₂))
 
 data ReduceRoot𝑘 {var : typ𝑘 → Set} :
-                 {τ₁ τ₂ τ₃ : typ𝑘} →
-                 root𝑘[ var ] τ₁ cps[ τ₂ , τ₃ ] →
-                 root𝑘[ var ] τ₁ cps[ τ₂ , τ₃ ] → Set where
-     βVal  : {τ τ₁ τ₂ τ₃ τ₄ : typ𝑘} →
-              {K𝑐 : pcontext𝑘[ var , τ₁ cps[ τ₃ , τ₄ ]] τ₃ cps[ τ₃ , τ₄ ]} →
-              {e  : var τ₂ → var (τ₁ ⇒ τ₃ cps[ τ₃ , τ₃ ]) →
-                    term𝑘[ var ] τ₃ cps[ τ₃ , τ₄ ]} →
-              {v  : value𝑘[ var ] τ₂ cps[τ,τ]} →
-              {e′ : term𝑘[ var ] τ₃ cps[ τ₃ , τ₄ ]} →
-              Subst𝑘 e v K𝑐 e′ → 
-              ReduceRoot𝑘 {τ₁ = τ}
-                (Root (λ k → NonVal K𝑐 (App (Fun τ₁ τ₂ (λ x → Root λ k′ → e x k′))
-                                            v)))
-                          (Root (λ k → e′))
+                 {τ τ₁ τ₂ τ₃ τ₄ : typ𝑘} →
+                 (var (τ₁ ⇒ τ₃ cps[ τ , τ ]) → term𝑘[ var ] τ₂ cps[ τ₂ , τ₄ ]) →
+                 (var (τ₁ ⇒ τ₃ cps[ τ , τ ]) → term𝑘[ var ] τ₂ cps[ τ₂ , τ₄ ]) → Set where
+                 -- root𝑘[ var ] τ₁ cps[ τ₂ , τ₃ ] → Set where
+     βVal  : {τ′ τ₁′ τ₃′ τ₀ τ₁ τ₂ τ₃ τ₄ α ζ : typ𝑘} →
+              {K𝑐 : pcontext𝑘[ var , τ₁ cps[ τ₃ , τ₄ ]] τ₀ cps[ τ₀ , τ₄ ]} →
+              {e  : var τ₄ → var (τ₁ ⇒ τ₃ cps[ τ₀ , τ₀ ]) →
+                    term𝑘[ var ] τ₂ cps[ τ₂ , τ₄ ]} →
+              {v  : value𝑘[ var ] τ₄ cps[τ,τ]} →
+              {e′ : term𝑘[ var ] τ₂ cps[ τ₂ , τ₄ ]} →
+              Subst𝑘 e v K𝑐 e′ →
+              ReduceRoot𝑘 {τ = τ′} {τ₁ = τ₁′} {τ₃ = τ₃′}
+                (λ k → NonVal Hole (Reset τ₀ τ₄ τ₄
+                       (NonVal K𝑐
+                               (App (Fun τ₀ τ₁ τ₄ (λ x k′ →
+                                         NonVal Hole (Reset τ₂ τ₄ τ₄ (e x k′))))
+                                    v))))
+                (λ k → NonVal Hole (Reset τ₂ τ₄ τ₄ e′))
 
 data ReduceTerm𝑘 {var : typ𝑘 → Set} :
                  {τ₂ τ₃ : typ𝑘} →
@@ -291,19 +291,23 @@ data ReduceTerm𝑘𝑠 {var : typ𝑘 → Set} :
                   {τ₂ τ₃ : typ𝑘} →
                   term𝑘[ var ] τ₂ cps[ τ₂ , τ₃ ] →
                   term𝑘[ var ] τ₂ cps[ τ₂ , τ₃ ] → Set where
-     βShift : {τ τ₁ τ₂ τ₃ τ₄ τ₅ : typ𝑘} →
-               {K𝑐 : pcontext𝑘[ var , τ₃ cps[ τ₄ , τ₄ ]] τ₅ cps[ τ₅ , τ₄ ]} →
-               {w : value𝑘[ var ] (τ₃ ⇒ τ₄ cps[ τ , τ ]) ⇒ τ₁ cps[ τ₁ , τ₄ ] cps[τ,τ]} → 
-               ReduceTerm𝑘𝑠 (NonVal Hole (Reset τ₅ τ₄ τ₄
-                 (NonVal K𝑐
-                 (App Shift w))))
-                           (NonVal Hole (Reset τ₁ τ₄ τ₄
-                 (NonVal Hole
-                 (App w
-                      (Fun τ₄ τ₃
-                      (λ y → Root (λ k → NonVal (KHole k)
-                             (Reset τ₅ τ₄ τ (Val K𝑐 (Var y))))))))))
-
+     βShift : {τ₁ τ₃ τ₄ : typ𝑘} →
+               {J : pcontext𝑘[ var , τ₃ cps[ τ₄ , τ₄ ]] τ₁ cps[ τ₁ , τ₄ ]} →
+               {w : value𝑘[ var ] (τ₃ ⇒ τ₄ cps[ τ₃ , τ₃ ]) ⇒ τ₁ cps[ τ₁ , τ₄ ] cps[τ,τ]} →
+               ReduceTerm𝑘𝑠
+                 (NonVal Hole (Reset τ₁ τ₄ τ₄
+                         (NonVal J
+                                 (App Shift w))))
+                 (NonVal Hole (Reset τ₁ τ₄ τ₄
+                         (NonVal Hole
+                                 (App w
+                                      (Fun τ₃ τ₄ τ₃ (λ y k →
+                                           NonVal Hole
+                                                  (Reset τ₃ τ₃ τ₃
+                                                         (NonVal (KHole k)
+                                                                 (Reset τ₁ τ₄ τ₃
+                                                                        (Val J (Var y)))))))))))
+                                                                        
 data ReduceTerm𝑘𝑅 {var : typ𝑘 → Set} :
                   {τ₂ : typ𝑘} →
                   term𝑘[ var ] τ₂ cps[ τ₂ , τ₂ ] →
@@ -319,9 +323,9 @@ data ReduceVal𝑘 {var : typ𝑘 → Set} :
                  value𝑘[ var ] τ₁ cps[τ,τ] →
                  value𝑘[ var ] τ₁ cps[τ,τ] → Set where
      ηVal : {τ₁ τ₂ τ₃ τ₄ : typ𝑘} →
-             {v : value𝑘[ var ] τ₂ ⇒ τ₁ cps[ τ₃ , τ₄ ] cps[τ,τ]} →
-             ReduceVal𝑘 (Fun τ₁ τ₂ (λ x → Root (λ k →
-                             NonVal (KHole k) (App v (Var x)))))
+             {v : value𝑘[ var ] τ₄ ⇒ τ₁ cps[ τ₃ , τ₄ ] cps[τ,τ]} →
+             ReduceVal𝑘 (Fun τ₃ τ₁ τ₃ (λ x k →
+                             NonVal (KHole k) (App v (Var x))))
                         v
 
 data ReduceCon𝑘 {var : typ𝑘 → Set} :

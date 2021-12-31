@@ -29,10 +29,10 @@ mutual
   data cpsvalue𝑐[_] (var : cpstyp → Set) : cpstyp → Set where
     CPSVar : {τ₁ : cpstyp} → var τ₁ → cpsvalue𝑐[ var ] τ₁
     CPSNum : ℕ → cpsvalue𝑐[ var ] Nat
-    CPSFun : {τ₁ τ₂ τ₃ τ₄ : cpstyp} →
-             -- (var τ₂ → var (τ₁ ⇒[ (τ₃ ⇒ τ) ]⇒ τ) → cpsterm𝑐[ var ] (τ₂ ⇒ τ₂) τ₄) →
-             (var τ₂ → var (τ₁ ⇒[ (τ₃ ⇒ τ₃) ]⇒ τ₃) → cpsterm𝑐[ var ] (τ₃ ⇒ τ₃) τ₄) →
-             cpsvalue𝑐[ var ] (τ₂ ⇒[ τ₁ ⇒ τ₃ ]⇒ τ₄)
+    CPSFun : {τ τ₁ τ₂ τ₃ τ₄ : cpstyp} →
+             (var τ₄ → var (τ₁ ⇒[ (τ₃ ⇒ τ) ]⇒ τ) → cpsterm𝑐[ var ] (τ₂ ⇒ τ₂) τ₄) →
+             -- (var τ₂ → var (τ₁ ⇒[ (τ₃ ⇒ τ₃) ]⇒ τ₃) → cpsterm𝑐[ var ] (τ₃ ⇒ τ₃) τ₄) →
+             cpsvalue𝑐[ var ] (τ₄ ⇒[ τ₁ ⇒ τ₃ ]⇒ τ₄)
     CPSShift : {τ₁ τ₂ τ₃ τ₄ τ₅ : cpstyp} →
                cpsvalue𝑐[ var ]
                  (((τ₁ ⇒[ τ₂ ⇒ τ₃ ]⇒ τ₃) ⇒[ τ₄ ⇒ τ₄ ]⇒ τ₅) ⇒[ τ₁ ⇒ τ₂ ]⇒ τ₅)
@@ -52,7 +52,6 @@ mutual
              cpsterm𝑐[ var ] (τ₀ ⇒ τ₀) τ₁ →
              cpsterm𝑐[ var ] (τ₃ ⇒ τ₃) τ₂
 
-
 -- 値による代入規則
 mutual
   data cpsSubstValV𝑐 {var : cpstyp → Set} : {τ τ₁ : cpstyp} →
@@ -67,11 +66,11 @@ mutual
             cpsSubstValV𝑐 (λ _ → CPSNum n) v (CPSNum n)
     sShift : {τ τ₁ τ₂ τ₃ τ₄ τ₅ : cpstyp} {v : cpsvalue𝑐[ var ] τ} →
              cpsSubstValV𝑐 (λ _ → CPSShift {τ₁ = τ₁} {τ₂} {τ₃} {τ₄} {τ₅}) v CPSShift
-    sFun  : {τ τ₁ τ₂ τ₃ τ₄ : cpstyp} →
-            {e  : var τ →  var τ₂ → var (τ₁ ⇒[ (τ₃ ⇒ τ₃) ]⇒ τ₃) → cpsterm𝑐[ var ] (τ₃ ⇒ τ₃) τ₄} → 
+    sFun  : {τ τ₀ τ₁ τ₂ τ₃ τ₄ : cpstyp} →
+            {e  : var τ →  var τ₄ → var (τ₁ ⇒[ (τ₃ ⇒ τ₀) ]⇒ τ₀) → cpsterm𝑐[ var ] (τ₂ ⇒ τ₂) τ₄} → 
             {v  : cpsvalue𝑐[ var ] τ} →
-            {e′ : var τ₂ → var (τ₁ ⇒[ (τ₃ ⇒ τ₃) ]⇒ τ₃) → cpsterm𝑐[ var ] (τ₃ ⇒ τ₃) τ₄} → 
-            ((x : var τ₂) → (k : var (τ₁ ⇒[ (τ₃ ⇒ τ₃) ]⇒ τ₃)) →
+            {e′ : var τ₄ → var (τ₁ ⇒[ (τ₃ ⇒ τ₀) ]⇒ τ₀) → cpsterm𝑐[ var ] (τ₂ ⇒ τ₂) τ₄} → 
+            ((x : var τ₄) → (k : var (τ₁ ⇒[ (τ₃ ⇒ τ₀) ]⇒ τ₀)) →
               cpsSubstV𝑐 (λ y → (e y) x k) v (e′ x k)) → 
             cpsSubstValV𝑐 (λ y → CPSFun (λ x k → (e y) x k)) v (CPSFun (λ x k → e′ x k))
 
@@ -127,36 +126,6 @@ mutual
 
 -- 値と継続の代入規則
 mutual
-  -- data cpsSubstVal𝑐 {var : cpstyp → Set} : {τ τ₁ α β γ : cpstyp} →
-  --                   (var τ → var (α ⇒[ (β ⇒ γ) ]⇒ γ) → cpsvalue𝑐[ var ] τ₁) →
-  --                   cpsvalue𝑐[ var ] τ →
-  --                   cpscont𝑐[ var ] (γ ⇒ γ) (α ⇒ β) → 
-  --                   cpsvalue𝑐[ var ] τ₁ → Set where
-  --   sVar=  : {τ α β γ : cpstyp} {v : cpsvalue𝑐[ var ] τ} {c : cpscont𝑐[ var ] (γ ⇒ γ) (α ⇒ β)} →
-  --            cpsSubstVal𝑐 (λ x _ → CPSVar x) v c v
-  --   sVar≠  : {τ τ₁ α β γ : cpstyp}
-  --            {v : cpsvalue𝑐[ var ] τ} {c : cpscont𝑐[ var ] (γ ⇒ γ) (α ⇒ β)} {x : var τ₁} →
-  --            cpsSubstVal𝑐 (λ _ _ → CPSVar x) v c (CPSVar x)
-  --   sNum   : {τ α β γ : cpstyp}
-  --            {v : cpsvalue𝑐[ var ] τ} {c : cpscont𝑐[ var ] (γ ⇒ γ) (α ⇒ β)} {n : ℕ} →
-  --            cpsSubstVal𝑐 (λ _ _ → CPSNum n) v c (CPSNum n)
-  --   sShift : {τ α β γ τ₁ τ₂ τ₃ τ₄ τ₅ : cpstyp} →
-  --            {v : cpsvalue𝑐[ var ] τ} {c : cpscont𝑐[ var ] (γ ⇒ γ) (α ⇒ β)} →
-  --            cpsSubstVal𝑐 (λ _ _ → CPSShift {τ₁ = τ₁} {τ₂} {τ₃} {τ₄} {τ₅}) v c CPSShift
-  --   sFun   : {τ₀ τ τ₁ τ₂ τ₃ τ₄ α β γ : cpstyp} →
-  --            {e : var τ → var (α ⇒[ (β ⇒ γ) ]⇒ γ) →
-  --                 var τ₂ → var (τ₁ ⇒[ (τ₃ ⇒ τ₃) ]⇒ τ₃) → cpsterm𝑐[ var ] (τ₃ ⇒ τ₃) τ₄} → 
-  --            {v : cpsvalue𝑐[ var ] τ} →
-  --            {c : cpscont𝑐[ var ] (γ ⇒ γ) (α ⇒ β)} →
-  --            {e′ : var τ₂ → var (τ₁ ⇒[ (τ₃ ⇒ τ₃) ]⇒ τ₃) → cpsterm𝑐[ var ] (τ₃ ⇒ τ₃) τ₄} → 
-  --            ((x : var τ₂) → (k : var (τ₁ ⇒[ (τ₃ ⇒ τ₃) ]⇒ τ₃)) →
-  --            cpsSubst𝑐 (λ y k₂ → (e y k₂) x k) v c (e′ x k)) → 
-  --            cpsSubstVal𝑐 (λ y k₂ → CPSFun (λ x k → (e y k₂) x k))
-  --                          v c
-  --                        (CPSFun (λ x k → e′ x k))
-
-
--- 継続の型はこれでいいのか...?
   data cpsSubst𝑐 {var : cpstyp → Set} : {τ τ₁ τ₃ α β γ ζ : cpstyp} →
                  (var τ → var (α ⇒[ (β ⇒ ζ) ]⇒ ζ) → cpsterm𝑐[ var ] (τ₃ ⇒ τ₃) τ₁) →
                  cpsvalue𝑐[ var ] τ →
@@ -224,25 +193,18 @@ mutual
              cpsSubstCont𝑐 {τ₄ = τ₃} (λ x k → CPSCont (e₁ x k)) v c (CPSCont e₁′)
 
 data cpsReduceR {var : cpstyp → Set}  :
-                {τ₁ τ₂ τ₃ : cpstyp} →
-                (var (τ₁ ⇒[ (τ₂ ⇒ τ₂) ]⇒ τ₂) → cpsterm𝑐[ var ] (τ₂ ⇒ τ₂) τ₃) →
-                (var (τ₁ ⇒[ (τ₂ ⇒ τ₂) ]⇒ τ₂) → cpsterm𝑐[ var ] (τ₂ ⇒ τ₂) τ₃) → Set where
-     βVal𝑐   : {τ τ′ τ₁ τ₂ τ₃ : cpstyp} →
-               {e₁ : var τ → var (τ′ ⇒[ (τ₂ ⇒ τ₂) ]⇒ τ₂) → cpsterm𝑐[ var ] (τ₂ ⇒ τ₂) τ₃} →
-               {v : cpsvalue𝑐[ var ] τ} →
-               {c : cpscont𝑐[ var ] (τ₂ ⇒ τ₂) τ₃ (τ′ ⇒ τ₂)} →
-               {e₂ : cpsterm𝑐[ var ] (τ₂ ⇒ τ₂) τ₃} →
+                {τ₀ τ₁ τ₂ τ₃ τ₄ : cpstyp} →
+                (var (τ₁ ⇒[ (τ₃ ⇒ τ₀) ]⇒ τ₀) → cpsterm𝑐[ var ] (τ₂ ⇒ τ₂) τ₄) →
+                (var (τ₁ ⇒[ (τ₃ ⇒ τ₀) ]⇒ τ₀) → cpsterm𝑐[ var ] (τ₂ ⇒ τ₂) τ₄) → Set where
+     βVal𝑐   : {τ₀′ τ₁′ τ₃′ τ₁ τ₂ τ₃ τ₄ : cpstyp} →
+               {e₁ : var τ₄ → var (τ₁ ⇒[ (τ₃ ⇒ τ₂) ]⇒ τ₂) → cpsterm𝑐[ var ] (τ₂ ⇒ τ₂) τ₄} →
+               {v : cpsvalue𝑐[ var ] τ₄} →
+               {c : cpscont𝑐[ var ] (τ₂ ⇒ τ₂) τ₄ (τ₁ ⇒ τ₃)} →
+               {e₂ : cpsterm𝑐[ var ] (τ₂ ⇒ τ₂) τ₄} →
                cpsSubst𝑐 e₁ v c e₂ →
-               cpsReduceR {τ₁ = τ₁} (λ k → CPSApp (CPSFun (λ x k′ → e₁ x k′)) v c) (λ k → e₂)
-     -- RTrans𝑐 : {τ₁ τ₂ τ₃ : cpstyp} →
-     --           (e₁ e₂ e₃ : var (τ₁ ⇒[ (τ₂ ⇒ τ₂) ]⇒ τ₂) → cpsterm𝑐[ var ] (τ₂ ⇒ τ₂) τ₃) → 
-     --           cpsReduceR e₁ e₂ →
-     --           cpsReduceR e₂ e₃ →
-     --           cpsReduceR e₁ e₃
-     -- RId𝑐    : {τ₁ τ₂ τ₃ : cpstyp} →
-     --           {e : var (τ₁ ⇒[ (τ₂ ⇒ τ₂) ]⇒ τ₂) → cpsterm𝑐[ var ] (τ₂ ⇒ τ₂) τ₃} →
-     --           cpsReduceR e e
-
+               cpsReduceR {τ₀ = τ₀′} {τ₁ = τ₁′} {τ₃ = τ₃′}
+                          (λ k → CPSApp (CPSFun (λ x k′ → e₁ x k′)) v c)
+                          (λ k → e₂)
 
  
 data cpsReduce {var : cpstyp → Set}  :
@@ -260,9 +222,11 @@ data cpsReduce• {var : cpstyp → Set} :
                 {τ₁ τ₂ : cpstyp} →
                 cpsterm𝑐[ var ] (τ₂ ⇒ τ₂) τ₁ →
                 cpsterm𝑐[ var ] (τ₂ ⇒ τ₂) τ₁ → Set where
-     βShift𝑐  : {τ₁ τ₂ τ₃ τ₄ : cpstyp} →
-                {w : cpsvalue𝑐[ var ] ((τ₁ ⇒[ τ₂ ⇒ τ₃ ]⇒ τ₃) ⇒[ τ₄ ⇒ τ₄ ]⇒ τ₂)} →
-                {j : cpscont𝑐[ var ] (τ₄ ⇒ τ₄) τ₂ (τ₁ ⇒ τ₂)} →
+     βShift𝑐  : {τ₁ τ₃ τ₄ : cpstyp} →
+                {w : cpsvalue𝑐[ var ] ((τ₃ ⇒[ τ₄ ⇒ τ₃ ]⇒ τ₃) ⇒[ τ₁ ⇒ τ₁ ]⇒ τ₄)} →
+                {j : cpscont𝑐[ var ] (τ₁ ⇒ τ₁) τ₄ (τ₃ ⇒ τ₄)} →
+                -- {w : cpsvalue𝑐[ var ] ((τ₃ ⇒[ τ₄ ⇒ τ₃ ]⇒ τ₃) ⇒[ τ₃ ⇒ τ₃ ]⇒ τ₄)} →
+                -- {j : cpscont𝑐[ var ] (τ₃ ⇒ τ₃) τ₄ (τ₃ ⇒ τ₄)} →                
                 cpsReduce• (CPSApp CPSShift w j)
                            (CPSApp w (CPSFun (λ x k → CPSRetE (CPSKVar k) (CPSRet j (CPSVar x)))) CPSId)
 
@@ -279,7 +243,7 @@ data cpsReduceV {var : cpstyp → Set}  :
                  cpsvalue𝑐[ var ] τ₁ →
                  cpsvalue𝑐[ var ] τ₁ → Set where
      ηVal𝑐 : {τ₁ τ₂ τ₃ τ₄ : cpstyp} →
-             {v : cpsvalue𝑐[ var ] (τ₂ ⇒[ τ₁ ⇒ τ₃ ]⇒ τ₄)} →
+             {v : cpsvalue𝑐[ var ] (τ₄ ⇒[ τ₁ ⇒ τ₃ ]⇒ τ₄)} →
              cpsReduceV (CPSFun (λ x k → CPSApp v (CPSVar x) (CPSKVar k))) v
 
 data cpsReduceK {var : cpstyp → Set}  :
@@ -290,22 +254,4 @@ data cpsReduceK {var : cpstyp → Set}  :
              {k : cpscont𝑐[ var ] (τ₃ ⇒ τ₃) τ₂ (τ₁ ⇒ τ₂)} →
              cpsReduceK (CPSCont (λ x → CPSRet k (CPSVar x))) k
 
-{-
-       -- RReset   : {τ₁ τ₂ : cpstyp} →
-       --            {v₂ : cpsvalue𝑐[ var ] {!!}} →
-       --            -- cpsReduce (CPSRet (CPSId (λ x → CPSVar x)) {!!}) {!v₂!}
-       RId𝑐     : {τ₁ τ₂ τ₃ : cpstyp} →
-                  {e : cpsterm𝑐[ var ] (τ₂ ⇒ τ₃) τ₁} →
-                  cpsReduce e e
-       RTrans𝑐  : {τ₁ τ₂ τ₃ : cpstyp} →
-                  (e₁ e₂ e₃ : cpsterm𝑐[ var ] (τ₂ ⇒ τ₃) τ₁) →
-                  cpsReduce e₁ e₂ →
-                  cpsReduce e₂ e₃ →
-                  cpsReduce e₁ e₃
-       RTrans𝑐′ : {τ₁ τ₂ τ₃ : cpstyp} →
-                  (e₁ e₂ e₃ : cpsterm𝑐[ var ] (τ₂ ⇒ τ₃) τ₁) →
-                  cpsReduce e₂ e₁ →
-                  cpsReduce e₂ e₃ →
-                  cpsReduce e₁ e₃
 
--}
