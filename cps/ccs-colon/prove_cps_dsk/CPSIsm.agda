@@ -29,7 +29,7 @@ mutual
           cpsvalue𝑐[ var ] (cpsT𝑘 τ₁)
   cpsV𝑘 .Nat (Num n) = CPSNum n
   cpsV𝑘 τ₁ (Var {τ₁ = .τ₁} v) = CPSVar v
-  cpsV𝑘 .(τ₄ ⇒ τ₁ cps[ τ₃ , τ₄ ]) (Fun τ τ₁ τ₂ {τ₃ = τ₃} {τ₄ = τ₄} e) =
+  cpsV𝑘 .(τ₀ ⇒ τ₁ cps[ τ₃ , τ₄ ]) (Fun τ₀ τ τ₁ τ₂ {τ₃ = τ₃} {τ₄ = τ₄} e) =
     CPSFun (λ x → cpsMain𝑘 τ τ₁ τ₂ τ₃ τ₄ (e x))
   cpsV𝑘 {var} .(((τ₃ ⇒ τ₄ cps[ τ , τ ]) ⇒ τ₁ cps[ τ₁ , τ₂ ]) ⇒ τ₃ cps[ τ₄ , τ₂ ])
               (Shift {τ = τ} {τ₁ = τ₁} {τ₂ = τ₂} {τ₃ = τ₃} {τ₄ = τ₄}) = CPSShift
