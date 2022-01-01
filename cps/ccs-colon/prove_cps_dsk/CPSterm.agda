@@ -248,8 +248,8 @@ data cpsReduceV {var : cpstyp → Set}  :
                  {τ₁ : cpstyp} →
                  cpsvalue𝑐[ var ] τ₁ →
                  cpsvalue𝑐[ var ] τ₁ → Set where
-     ηVal𝑐 : {τ₁ τ₂ τ₃ τ₄ : cpstyp} →
-             {v : cpsvalue𝑐[ var ] (τ₄ ⇒[ τ₁ ⇒ τ₃ ]⇒ τ₄)} →
+     ηVal𝑐 : {τ₀ τ₁ τ₃ τ₄ : cpstyp} →
+             {v : cpsvalue𝑐[ var ] (τ₀ ⇒[ τ₁ ⇒ τ₃ ]⇒ τ₄)} →
              cpsReduceV (CPSFun (λ x k → CPSApp v (CPSVar x) (CPSKVar k))) v
 
 data cpsReduceK {var : cpstyp → Set}  :

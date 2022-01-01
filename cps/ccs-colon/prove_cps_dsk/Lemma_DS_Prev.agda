@@ -71,12 +71,11 @@ correctVal𝑘 : {var : typ𝑘 → Set} → {τ₁ : cpstyp} →
               {v′ : cpsvalue𝑐[ var ∘ dsT ] τ₁} →
               cpsReduceV v v′ →
               ReduceVal𝑘 {var} (dsV𝑐 τ₁ v) (dsV𝑐 τ₁ v′)
-correctVal𝑘 {var} {.(τ₄ ⇒[ τ₁ ⇒ τ₃ ]⇒ τ₄)}
-            {.(CPSFun {_} {τ₃} {τ₄} {τ₁} {τ₃} {τ₃} {τ₄}
-              (λ x k → CPSApp {_} {τ₁} {τ₄} {τ₃} {τ₄} {τ₃}
-                               v′ (CPSVar {_} {τ₄} x) (CPSKVar {_} {τ₁} {τ₃} {τ₄} k)))}
-            {v′}
-            (ηVal𝑐 {τ₁ = τ₁} {τ₂ = τ₂} {τ₃ = τ₃} {τ₄ = τ₄} {v = .v′}) =
+correctVal𝑘 {var} {.(τ₀ ⇒[ τ₁ ⇒ τ₃ ]⇒ τ₄)}
+            {.(CPSFun {_} {τ₃} {τ₀} {τ₁} {τ₃} {τ₃} {τ₄}
+                      (λ x k → CPSApp {_} {τ₁} {τ₀} {τ₃} {τ₄} {τ₃}
+                                       v′ (CPSVar {_} {τ₀} x) (CPSKVar {_} {τ₁} {τ₃} {τ₄} k)))}
+            {v′} (ηVal𝑐 {τ₀ = τ₀} {τ₁ = τ₁} {τ₃ = τ₃} {τ₄ = τ₄} {v = .v′}) =
   ηVal
 
 correctCon𝑘 : {var : typ𝑘 → Set} → {τ₁ τ₂ τ₃ τ₅ : cpstyp} →

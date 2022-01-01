@@ -20,11 +20,11 @@ dsT (τ₂ ⇒[ τ₁ ⇒ τ₃ ]⇒ τ₄) = (dsT τ₂) ⇒ (dsT τ₁) cps[ (
 -- DS transformation to source term
 
 mutual
-  dsMain𝑐 : (τ τ₁ τ₂ τ₃ τ₄ : cpstyp) → {var : typ𝑘 → Set} →
-            ((var ∘ dsT) (τ₁ ⇒[ τ₃ ⇒ τ ]⇒ τ) → cpsterm𝑐[ var ∘ dsT ] (τ₂ ⇒ τ₂) τ₄) →
-            (var (dsT τ₁ ⇒ dsT τ₃ cps[ dsT τ , dsT τ ]) →
-              term𝑘[ var ] dsT τ₄ cps[ dsT τ₄ , dsT τ₄ ])
-  dsMain𝑐 τ τ₁ τ₂ τ₃ τ₄ r = λ k → NonVal Hole (Reset (dsT τ₂) (dsT τ₄) (dsT τ₄) (dsE𝑐 τ₄ τ₂ (r k)))
+  -- dsMain𝑐 : (τ τ₁ τ₂ τ₃ τ₄ : cpstyp) → {var : typ𝑘 → Set} →
+  --           ((var ∘ dsT) (τ₁ ⇒[ τ₃ ⇒ τ ]⇒ τ) → cpsterm𝑐[ var ∘ dsT ] (τ₂ ⇒ τ₂) τ₄) →
+  --           (var (dsT τ₁ ⇒ dsT τ₃ cps[ dsT τ , dsT τ ]) →
+  --             term𝑘[ var ] dsT τ₄ cps[ dsT τ₄ , dsT τ₄ ])
+  -- dsMain𝑐 τ τ₁ τ₂ τ₃ τ₄ r = λ k → dsE𝑐 {!!} {!!} {!r!}
 
   dsV𝑐 : (τ₁ : cpstyp) → {var : typ𝑘 → Set} →
          cpsvalue𝑐[ var ∘ dsT ] τ₁ →
