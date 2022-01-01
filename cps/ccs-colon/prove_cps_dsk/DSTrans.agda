@@ -31,9 +31,10 @@ mutual
          value𝑘[ var ] (dsT τ₁) cps[τ,τ]
   dsV𝑐 τ₁  (CPSVar {τ₁ = .τ₁} v) = Var v
   dsV𝑐 .Nat (CPSNum n)             = Num n
-  dsV𝑐 .(τ₄ ⇒[ τ₁ ⇒ τ₃ ]⇒ τ₄) {var}
-       (CPSFun {τ = τ} {τ₁ = τ₁} {τ₂ = τ₂} {τ₃ = τ₃} {τ₄ = τ₄} e) =
-    Fun (dsT τ) (dsT τ₁) (dsT τ₄) (λ x → dsMain𝑐 τ τ₁ τ₂ τ₃ τ₄ (e x))
+  dsV𝑐 .(τ₀ ⇒[ τ₁ ⇒ τ₃ ]⇒ τ₄) {var}
+       (CPSFun {τ = τ} {τ₀ = τ₀} {τ₁ = τ₁} {τ₂ = τ₂} {τ₃ = τ₃} {τ₄ = τ₄} e) =
+    -- Fun (dsT τ₀) (dsT τ) (dsT τ₁) (dsT τ₄) (λ x → dsMain𝑐 τ τ₁ τ₂ τ₃ τ₄ (e x))
+    Fun (dsT τ₀) (dsT τ) (dsT τ₁) (dsT τ₂) (λ x k → dsE𝑐 τ₄ τ₂ (e x k))
   dsV𝑐 .(((τ₁ ⇒[ τ₂ ⇒ τ₃ ]⇒ τ₃) ⇒[ τ₄ ⇒ τ₄ ]⇒ τ₅) ⇒[ τ₁ ⇒ τ₂ ]⇒ τ₅)
        (CPSShift {τ₁ = τ₁} {τ₂ = τ₂} {τ₃ = τ₃} {τ₄ = τ₄} {τ₅ = τ₅}) =
     Shift

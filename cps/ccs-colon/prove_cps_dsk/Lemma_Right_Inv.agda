@@ -42,21 +42,6 @@ postulate
 
 {-# REWRITE cpsT𝑘∘dsT≡id #-}
 mutual 
-  Right-InvR : {var : cpstyp → Set} → {τ₁ τ₂ τ₃ : cpstyp} →
-               (r : (var (τ₁ ⇒[ (τ₂ ⇒ τ₂) ]⇒ τ₂) → cpsterm𝑐[ var ] (τ₂ ⇒ τ₂) τ₃)) →
-               cpsMain𝑘 (dsT τ₁) (dsT τ₂) (dsT τ₃) (dsMain𝑐 τ₁ τ₂ τ₃ r)
-               ≡
-               r
-  Right-InvR {var} {τ₁} {τ₂} {τ₃} r =
-    begin
-      cpsMain𝑘 (dsT τ₁) (dsT τ₂) (dsT τ₃) (dsMain𝑐 τ₁ τ₂ τ₃ r)
-    ≡⟨ refl ⟩
-      (λ k → cpsE𝑘 (dsT τ₃) (dsT τ₂) (dsE𝑐 τ₃ τ₂ (r k)))
-    ≡⟨ extensionality (λ k → Right-InvE (r k)) ⟩
-      (λ k → r k)
-    ∎
-    where open ≡-Reasoning          
-
   Right-InvE : {var : cpstyp → Set} → {τ₃ τ₅ : cpstyp} →
                (e : cpsterm𝑐[ var ] (τ₅ ⇒ τ₅) τ₃) →
                cpsE𝑘 (dsT τ₃) (dsT τ₅) (dsE𝑐 τ₃ τ₅ e)
@@ -116,18 +101,18 @@ mutual
                v
   Right-InvV {var} {τ₁} (CPSVar {τ₁ = .τ₁} v) = refl
   Right-InvV {var} {.Nat} (CPSNum n) = refl
-  Right-InvV {var} {.(τ₂ ⇒[ τ₁ ⇒ τ₃ ]⇒ τ₄)}
-             (CPSFun {τ₁ = τ₁} {τ₂ = τ₂} {τ₃ = τ₃} {τ₄ = τ₄} r) =
+  Right-InvV {var} {.(τ₀ ⇒[ τ₁ ⇒ τ₃ ]⇒ τ₄)}
+             (CPSFun {τ = τ} {τ₀ = τ₀} {τ₁ = τ₁} {τ₂ = τ₂} {τ₃ = τ₃} {τ₄ = τ₄} e) =
     begin
-      cpsV𝑘 (dsT (τ₂ ⇒[ τ₁ ⇒ τ₃ ]⇒ τ₄))
-            (dsV𝑐 (τ₂ ⇒[ τ₁ ⇒ τ₃ ]⇒ τ₄) (CPSFun r))
+      cpsV𝑘 (dsT (τ₀ ⇒[ τ₁ ⇒ τ₃ ]⇒ τ₄))
+            (dsV𝑐 (τ₀ ⇒[ τ₁ ⇒ τ₃ ]⇒ τ₄) (CPSFun e))
     ≡⟨ refl ⟩
-      CPSFun (λ x k → cpsE𝑘 (dsT τ₄) (dsT τ₃) (dsE𝑐 τ₄ τ₃ (r x k)))
-    ≡⟨ cong CPSFun (extensionality (λ x → Right-InvR (r x))) ⟩
-      CPSFun r
+      CPSFun (λ x k → cpsE𝑘 (dsT τ₄) (dsT τ₂) (dsE𝑐 τ₄ τ₂ (e x k)))
+    ≡⟨ cong CPSFun (extensionality (λ x → extensionality (λ k →
+                   Right-InvE (e x k)))) ⟩
+      CPSFun e
     ∎
-    where open ≡-Reasoning          
-
+    where open ≡-Reasoning 
   Right-InvV {var} {.(((τ₁ ⇒[ τ₂ ⇒ τ₃ ]⇒ τ₃) ⇒[ τ₄ ⇒ τ₄ ]⇒ τ₅) ⇒[ τ₁ ⇒ τ₂ ]⇒ τ₅)} (CPSShift {τ₁ = τ₁} {τ₂ = τ₂} {τ₃ = τ₃} {τ₄ = τ₄} {τ₅ = τ₅}) = refl
 
   Right-InvC : {var : cpstyp → Set} → {τ₁ τ₂ τ₃ τ₅ : cpstyp} →

@@ -42,21 +42,6 @@ postulate
 
 {-# REWRITE dsT∘cpsT𝑘≡id #-}
 mutual
-  Left-InvR : {var : typ𝑘 → Set} → {τ₁ τ₂ τ₃ : typ𝑘} →
-              (r : root𝑘[ var ] τ₁ cps[ τ₂ , τ₃ ]) →
-              r
-              ≡
-              dsMain𝑐 (cpsT𝑘 τ₁) (cpsT𝑘 τ₂) (cpsT𝑘 τ₃) (cpsMain𝑘 τ₁ τ₂ τ₃ r)
-  Left-InvR {var} {τ₁} {τ₂} {τ₃} (Root e) =
-    begin
-      Root (λ k → e k)
-    ≡⟨ cong Root (extensionality (λ k → Left-InvE (e k))) ⟩
-      Root (λ k → dsE𝑐 (cpsT𝑘 τ₃) (cpsT𝑘 τ₂) (cpsE𝑘 τ₃ τ₂ (e k)))
-    ≡⟨ refl ⟩
-      dsMain𝑐 (cpsT𝑘 τ₁) (cpsT𝑘 τ₂) (cpsT𝑘 τ₃) (cpsMain𝑘 τ₁ τ₂ τ₃ (Root (λ k → e k)))
-    ∎
-    where open ≡-Reasoning
-
   Left-InvE : {var : typ𝑘 → Set} → {τ₃ τ₅ : typ𝑘} →
               (e : term𝑘[ var ] τ₅ cps[ τ₅ , τ₃ ]) → 
               e
@@ -121,19 +106,20 @@ mutual
               dsV𝑐 (cpsT𝑘 τ₁) (cpsV𝑘 τ₁ v)
   Left-InvV {var} {.Nat} (Num n) = refl
   Left-InvV {var} {τ₁} (Var {τ₁ = .τ₁} v) = refl
-  Left-InvV {var} {.(τ₂ ⇒ τ₁ cps[ τ₃ , τ₄ ])}
-            (Fun τ₁ τ₂ {τ₃ = τ₃} {τ₄ = τ₄} r) =
+  Left-InvV {var} {.(τ₀ ⇒ τ₁ cps[ τ₃ , τ₄ ])}
+            (Fun τ₀ τ τ₁ τ₂ {τ₃ = τ₃} {τ₄ = τ₄} e) =
     begin
-      Fun τ₁ τ₂ (λ x → r x)
-    ≡⟨ cong (Fun τ₁ τ₂) (extensionality (λ x → Left-InvR (r x))) ⟩
-      Fun τ₁ τ₂
-          (λ x → dsMain𝑐 (cpsT𝑘 τ₁) (cpsT𝑘 τ₃) (cpsT𝑘 τ₄) (cpsMain𝑘 τ₁ τ₃ τ₄ (r x)))
+      Fun τ₀ τ τ₁ τ₂ (λ x k → e x k)
+    ≡⟨ cong (Fun τ₀ τ τ₁ τ₂)
+            (extensionality (λ x → extensionality (λ k →
+              Left-InvE (e x k)))) ⟩
+      Fun τ₀ τ τ₁ τ₂
+          (λ x k → dsE𝑐 (cpsT𝑘 τ₄) (cpsT𝑘 τ₂) (cpsE𝑘 τ₄ τ₂ (e x k)))
     ≡⟨ refl ⟩
-      dsV𝑐 (cpsT𝑘 (τ₂ ⇒ τ₁ cps[ τ₃ , τ₄ ]))
-           (cpsV𝑘 (τ₂ ⇒ τ₁ cps[ τ₃ , τ₄ ]) (Fun τ₁ τ₂ (λ x → r x)))
+      dsV𝑐 (cpsT𝑘 (τ₀ ⇒ τ₁ cps[ τ₃ , τ₄ ]))
+           (cpsV𝑘 (τ₀ ⇒ τ₁ cps[ τ₃ , τ₄ ]) (Fun τ₀ τ τ₁ τ₂ e))
     ∎
     where open ≡-Reasoning
-
   Left-InvV {var} {.(((τ₃ ⇒ τ₄ cps[ τ , τ ]) ⇒ τ₁ cps[ τ₁ , τ₂ ]) ⇒ τ₃ cps[ τ₄ , τ₂ ])}
             (Shift {τ = τ} {τ₁ = τ₁} {τ₂ = τ₂} {τ₃ = τ₃} {τ₄ = τ₄}) = refl
 
