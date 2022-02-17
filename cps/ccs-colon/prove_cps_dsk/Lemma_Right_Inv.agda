@@ -2,7 +2,7 @@
 
 module Lemma_Right_Inv where
 
-open import DStermK hiding (_⇒_cps[_])
+open import DStermK
 open import CPSterm
 open import CPSIsm
 open import DSTrans
@@ -16,7 +16,6 @@ open import Agda.Builtin.Equality.Rewrite
 
 open import Level using (Level)
 open import Axiom.Extensionality.Propositional
-
 
 cpsT𝑘∘dsT≡id : (τ : cpstyp) → cpsT𝑘 (dsT τ) ≡ τ
 cpsT𝑘∘dsT≡id Nat     = refl
@@ -37,103 +36,46 @@ cpsT𝑘∘dsT≡id (τ ⇒[ τ₁ ⇒ τ₂ ]⇒ τ₃) = begin
     (τ ⇒[ τ₁ ⇒ τ₂ ]⇒ τ₃)
   ∎
   where open ≡-Reasoning
+
+cpsT𝑘𝑐∘dsT𝑐≡id : (τ : conttyp) → cpsT𝑘𝑐 (dsT𝑐 τ) ≡ τ
+cpsT𝑘𝑐∘dsT𝑐≡id (τ₂ ⇒ τ₁) =
+  cong₂ _⇒_ (cpsT𝑘∘dsT≡id τ₂) (cpsT𝑘∘dsT≡id τ₁)
+
 postulate
   extensionality : {a b : Level} → Extensionality a b
 
-{-# REWRITE cpsT𝑘∘dsT≡id #-}
-mutual 
-  Right-InvE : {var : cpstyp → Set} → {τ₃ τ₅ : cpstyp} →
-               (e : cpsterm𝑐[ var ] (τ₅ ⇒ τ₅) τ₃) →
-               cpsE𝑘 (dsT τ₃) (dsT τ₅) (dsE𝑐 τ₃ τ₅ e)
-               ≡
-               e
-  Right-InvE {var} {τ₃} {τ₅} (CPSRet {τ₁ = τ₁} {τ₂ = .τ₃} {τ₃ = .τ₅} k v) =
-    begin
-      cpsE𝑘 (dsT τ₃) (dsT τ₅) (dsE𝑐 τ₃ τ₅ (CPSRet k v))
-    ≡⟨ refl ⟩
-      CPSRet
-        (cpsC𝑘 (dsT τ₁) (dsT τ₃) (dsT τ₃) (dsT τ₅) (dsC𝑐 τ₁ τ₃ τ₃ τ₅ k))
-        (cpsV𝑘 (dsT τ₁) (dsV𝑐 τ₁ v))
-    ≡⟨ cong₂ CPSRet (Right-InvC k) (Right-InvV v) ⟩
-      CPSRet k v
-    ∎
-    where open ≡-Reasoning          
+{-# REWRITE cpsT𝑘∘dsT≡id cpsT𝑘𝑐∘dsT𝑐≡id #-}
+mutual
+  Right-InvV : {var : cpstyp → Set} {cvar : conttyp → Set} → {τ₁ : cpstyp} →
+               (v : cpsvalue𝑐[ var , cvar ] τ₁) →
+               cpsV𝑘 (dsV𝑐 v) ≡ v
+  Right-InvV (CPSVar x) = refl
+  Right-InvV (CPSNum n) = refl
+  Right-InvV (CPSFun e) =
+    cong CPSFun (extensionality (λ x → extensionality (λ k →
+      Right-InvE (e x k))))
+  Right-InvV CPSShift = refl
 
-  Right-InvE {var} {τ₃} {τ₅}
-             (CPSApp {τ₁ = τ₁} {τ₂ = τ₂} {τ₃ = τ₄} {τ₄ = .τ₃} {τ₅ = .τ₅}
-                     v w k) =
-    begin
-      cpsE𝑘 (dsT τ₃) (dsT τ₅) (dsE𝑐 τ₃ τ₅ (CPSApp v w k))
-    ≡⟨ refl ⟩
-      CPSApp
-        (cpsV𝑘 (dsT τ₂ ⇒ dsT τ₁ cps[ dsT τ₄ , dsT τ₃ ])
-               (dsV𝑐 (τ₂ ⇒[ τ₁ ⇒ τ₄ ]⇒ τ₃) v))
-        (cpsV𝑘 (dsT τ₂) (dsV𝑐 τ₂ w))
-        (cpsC𝑘 (dsT τ₁) (dsT τ₄) (dsT τ₃) (dsT τ₅) (dsC𝑐 τ₁ τ₄ τ₃ τ₅ k))
-    ≡⟨ cong₂ (λ x y → CPSApp x y
-                             (cpsC𝑘 (dsT τ₁) (dsT τ₄) (dsT τ₃) (dsT τ₅)
-                                    (dsC𝑐 τ₁ τ₄ τ₃ τ₅ k)))
-             (Right-InvV v) (Right-InvV w) ⟩
-      CPSApp v w
-             (cpsC𝑘 (dsT τ₁) (dsT τ₄) (dsT τ₃) (dsT τ₅) (dsC𝑐 τ₁ τ₄ τ₃ τ₅ k))
-    ≡⟨ cong (CPSApp v w) (Right-InvC k) ⟩
+  Right-InvE : {var : cpstyp → Set} {cvar : conttyp → Set} → {τ : cpstyp} →
+               (e : cpsterm𝑐[ var , cvar ] τ) →
+               cpsE𝑘 (dsE𝑐 e) ≡ e
+  Right-InvE (CPSRet k v) = cong₂ CPSRet (Right-InvC k) (Right-InvV v)
+  Right-InvE (CPSApp v w k) = begin
+      CPSApp (cpsV𝑘 (dsV𝑐 v)) (cpsV𝑘 {τ₁ = dsT _} (dsV𝑐 w))
+             (cpsC𝑘 {τ₁ = dsT _} {τ₂ = dsT _} (dsC𝑐 k))
+    ≡⟨ cong (CPSApp _ _) (Right-InvC k) ⟩
+      CPSApp (cpsV𝑘 (dsV𝑐 v)) (cpsV𝑘 {τ₁ = dsT _} (dsV𝑐 w))
+             k
+    ≡⟨ cong (λ x → x k) (cong₂ CPSApp (Right-InvV v) (Right-InvV w)) ⟩
       CPSApp v w k
     ∎
-    where open ≡-Reasoning          
+    where open ≡-Reasoning
+  Right-InvE (CPSRetE k e) = cong₂ CPSRetE (Right-InvC k) (Right-InvE e)
 
-  Right-InvE {var} {τ₃} {τ₅}
-             (CPSRetE {τ₀ = τ₀} {τ₁ = τ₁} {τ₂ = .τ₃} {τ₃ = .τ₅} k e) =
-    begin
-      cpsE𝑘 (dsT τ₃) (dsT τ₅) (dsE𝑐 τ₃ τ₅ (CPSRetE k e))
-    ≡⟨ refl ⟩
-      CPSRetE
-        (cpsC𝑘 (dsT τ₁) (dsT τ₃) (dsT τ₃) (dsT τ₅) (dsC𝑐 τ₁ τ₃ τ₃ τ₅ k))
-        (cpsE𝑘 (dsT τ₁) (dsT τ₀) (dsE𝑐 τ₁ τ₀ e))
-    ≡⟨ cong₂ CPSRetE (Right-InvC k) (Right-InvE e) ⟩
-      CPSRetE k e
-    ∎
-    where open ≡-Reasoning          
-
-  Right-InvV : {var : cpstyp → Set} → {τ₁ : cpstyp} →
-               (v : cpsvalue𝑐[ var ] τ₁) →
-               cpsV𝑘 (dsT τ₁) (dsV𝑐 τ₁ v)
-               ≡
-               v
-  Right-InvV {var} {τ₁} (CPSVar {τ₁ = .τ₁} v) = refl
-  Right-InvV {var} {.Nat} (CPSNum n) = refl
-  Right-InvV {var} {.(τ₀ ⇒[ τ₁ ⇒ τ₃ ]⇒ τ₄)}
-             (CPSFun {τ = τ} {τ₀ = τ₀} {τ₁ = τ₁} {τ₂ = τ₂} {τ₃ = τ₃} {τ₄ = τ₄} e) =
-    begin
-      cpsV𝑘 (dsT (τ₀ ⇒[ τ₁ ⇒ τ₃ ]⇒ τ₄))
-            (dsV𝑐 (τ₀ ⇒[ τ₁ ⇒ τ₃ ]⇒ τ₄) (CPSFun e))
-    ≡⟨ refl ⟩
-      CPSFun (λ x k → cpsE𝑘 (dsT τ₄) (dsT τ₂) (dsE𝑐 τ₄ τ₂ (e x k)))
-    ≡⟨ cong CPSFun (extensionality (λ x → extensionality (λ k →
-                   Right-InvE (e x k)))) ⟩
-      CPSFun e
-    ∎
-    where open ≡-Reasoning 
-  Right-InvV {var} {.(((τ₁ ⇒[ τ₂ ⇒ τ₃ ]⇒ τ₃) ⇒[ τ₄ ⇒ τ₄ ]⇒ τ₅) ⇒[ τ₁ ⇒ τ₂ ]⇒ τ₅)} (CPSShift {τ₁ = τ₁} {τ₂ = τ₂} {τ₃ = τ₃} {τ₄ = τ₄} {τ₅ = τ₅}) = refl
-
-  Right-InvC : {var : cpstyp → Set} → {τ₁ τ₂ τ₃ τ₅ : cpstyp} →
-               (k : cpscont𝑐[ var ] (τ₅ ⇒ τ₅) τ₃ (τ₁ ⇒ τ₂)) →
-               cpsC𝑘 (dsT τ₁) (dsT τ₂) (dsT τ₃) (dsT τ₅)
-                     (dsC𝑐 τ₁ τ₂ τ₃ τ₅ k)
-               ≡
-               k
-  Right-InvC {var} {τ₁} {τ₂} {τ₃} {.τ₂}
-             (CPSKVar {τ₁ = .τ₁} {τ₂ = .τ₂} {τ₃ = .τ₃} k) = refl
-  Right-InvC {var} {τ₁} {.τ₁} {τ₃} {.τ₁}
-             (CPSId {τ₁ = .τ₁} {τ₃ = .τ₃}) = refl
-  Right-InvC {var} {τ₁} {τ₂} {τ₃} {τ₅}
-             (CPSCont {τ₁ = .τ₁} {τ₂ = .τ₂} {τ₃ = .τ₃} {τ₄ = .τ₅} e) =
-    begin
-      cpsC𝑘 (dsT τ₁) (dsT τ₂) (dsT τ₃) (dsT τ₅)
-            (dsC𝑐 τ₁ τ₂ τ₃ τ₅ (CPSCont e))
-    ≡⟨ refl ⟩
-      CPSCont (λ x → cpsE𝑘 (dsT τ₂) (dsT τ₅) (dsE𝑐 τ₂ τ₅ (e x)))
-    ≡⟨ cong CPSCont (extensionality (λ x → Right-InvE (e x))) ⟩
-      CPSCont e
-    ∎
-    where open ≡-Reasoning          
-
+  Right-InvC : {var : cpstyp → Set} {cvar : conttyp → Set} {τ₁ τ₂ : cpstyp} →
+               (k : cpscont𝑐[ var , cvar ] (τ₁ ⇒ τ₂)) →
+               cpsC𝑘 (dsC𝑐 k) ≡ k
+  Right-InvC (CPSKVar k) = refl
+  Right-InvC CPSId = refl
+  Right-InvC (CPSCont e) =
+    cong CPSCont (extensionality (λ x → Right-InvE (e x)))

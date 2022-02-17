@@ -7,14 +7,14 @@ open import DSTrans
 open import Function
 
 mutual
-  eSubstValV𝑘 : {var : typ𝑘 → Set} {τ₁ τ : cpstyp} →
-                {v₁ : var (dsT τ) → cpsvalue𝑐[ var ∘ dsT ] τ₁} →
-                {v₂ : cpsvalue𝑐[ var ∘ dsT ] τ₁} →
-                {v  : cpsvalue𝑐[ var ∘ dsT ] τ} →
+  eSubstValV𝑘 : {var : typ𝑘 → Set} {cvar : typ𝑘𝑐 → Set} {τ₁ τ : cpstyp} →
+                {v₁ : var (dsT τ) → cpsvalue𝑐[ var ∘ dsT , cvar ∘ dsT𝑐 ] τ₁} →
+                {v₂ : cpsvalue𝑐[ var ∘ dsT , cvar ∘ dsT𝑐 ] τ₁} →
+                {v  : cpsvalue𝑐[ var ∘ dsT , cvar ∘ dsT𝑐 ] τ} →
                 cpsSubstValV𝑐 v₁ v v₂ →
-                SubstValV𝑘 {var} (λ y → dsV𝑐 τ₁ (v₁ y))
-                                 (dsV𝑐 τ v)
-                                 (dsV𝑐 τ₁ v₂)
+                SubstValV𝑘 {var} {cvar}
+                           (λ y → dsV𝑐 (v₁ y)) (dsV𝑐 v)
+                           (dsV𝑐 v₂)
   eSubstValV𝑘 sVar=  = sVar=
   eSubstValV𝑘 sVar≠  = sVar≠
   eSubstValV𝑘 sNum   = sNum
@@ -22,42 +22,28 @@ mutual
   eSubstValV𝑘 (sFun sub) =
     sFun (λ x k → eSubstV𝑘 (sub x k))
 
-  eSubstConV𝑘 : {var : typ𝑘 → Set} {τ τ₁ τ₂ τ₃ τ₄ : cpstyp} →
+  eSubstConV𝑘 : {var : typ𝑘 → Set} {cvar : typ𝑘𝑐 → Set} {τ τ₁ τ₂ : cpstyp} →
                 {k₁ : var (dsT τ) →
-                      cpscont𝑐[ var ∘ dsT ] (τ₄ ⇒ τ₄) τ₃ (τ₁ ⇒ τ₂)} →
-                {k₂ : cpscont𝑐[ var ∘ dsT ] (τ₄ ⇒ τ₄) τ₃ (τ₁ ⇒ τ₂)} →
-                {v  : cpsvalue𝑐[ var ∘ dsT ] τ} →
+                      cpscont𝑐[ var ∘ dsT , cvar ∘ dsT𝑐 ] (τ₁ ⇒ τ₂)} →
+                {k₂ : cpscont𝑐[ var ∘ dsT , cvar ∘ dsT𝑐 ] (τ₁ ⇒ τ₂)} →
+                {v  : cpsvalue𝑐[ var ∘ dsT , cvar ∘ dsT𝑐 ] τ} →
                 cpsSubstContV𝑐 k₁ v k₂ →
-                SubstConV𝑘 {var} (λ y → dsC𝑐 τ₁ τ₂ τ₃ τ₄ (k₁ y))
-                                 (dsV𝑐 τ v)
-                                 (dsC𝑐 τ₁ τ₂ τ₃ τ₄ k₂)
+                SubstConV𝑘 {var} {cvar}
+                           (λ y → dsC𝑐 (k₁ y))
+                           (dsV𝑐 v) (dsC𝑐 k₂)
   eSubstConV𝑘 sKVar≠      = sConVar≠
   eSubstConV𝑘 sKId        = sConId
   eSubstConV𝑘 (sKFun sub) = sConLet (λ x → eSubstV𝑘 (sub x))
 
-  -- eSubstRootV𝑘 : {var : typ𝑘 → Set} {τ τ₁ τ₂ τ₃ : cpstyp} →
-  --                {e₁ : var (dsT τ) → var (dsT (τ₁ ⇒[ τ₂ ⇒ τ₂ ]⇒ τ₂)) → 
-  --                      cpsterm𝑐[ var ∘ dsT ] (τ₂ ⇒ τ₂) τ₃} →
-  --                {e₂ : var (dsT (τ₁ ⇒[ τ₂ ⇒ τ₂ ]⇒ τ₂)) →
-  --                      cpsterm𝑐[ var ∘ dsT ] (τ₂ ⇒ τ₂) τ₃} →
-  --                {v  : cpsvalue𝑐[ var ∘ dsT ] τ} →
-  --                ((k : var (dsT (τ₁ ⇒[ τ₂ ⇒ τ₂ ]⇒ τ₂))) →
-  --                      cpsSubstV𝑐 (λ x → (e₁ x) k) v (e₂ k)) → 
-  --                SubstRootV𝑘 {var} (λ y → dsMain𝑐 τ₁ τ₂ τ₃ (e₁ y))
-  --                                  (dsV𝑐 τ v)
-  --                                  (dsMain𝑐 τ₁ τ₂ τ₃ e₂)
-  -- eSubstRootV𝑘 sub = sRoot (λ k → eSubstV𝑘 (sub k))
-
-
-  eSubstV𝑘 : {var : typ𝑘 → Set} {τ τ₂ τ₃ : cpstyp} →
+  eSubstV𝑘 : {var : typ𝑘 → Set} {cvar : typ𝑘𝑐 → Set} {τ τ₁ : cpstyp} →
              {e₁ : var (dsT τ) →
-                   cpsterm𝑐[ var ∘ dsT ] (τ₃ ⇒ τ₃) τ₂} →
-             {e₂ : cpsterm𝑐[ var ∘ dsT ] (τ₃ ⇒ τ₃) τ₂} →
-             {v  : cpsvalue𝑐[ var ∘ dsT ] τ} →
+                   cpsterm𝑐[ var ∘ dsT , cvar ∘ dsT𝑐 ] τ₁} →
+             {e₂ : cpsterm𝑐[ var ∘ dsT , cvar ∘ dsT𝑐 ] τ₁} →
+             {v  : cpsvalue𝑐[ var ∘ dsT , cvar ∘ dsT𝑐 ] τ} →
              cpsSubstV𝑐 e₁ v e₂ →
-             SubstV𝑘 {var} (λ y → dsE𝑐 τ₂ τ₃ (e₁ y))
-                           (dsV𝑐 τ v)
-                           (dsE𝑐 τ₂ τ₃ e₂)
+             SubstV𝑘 {var} {cvar}
+                     (λ y → dsE𝑐 (e₁ y))
+                     (dsV𝑐 v) (dsE𝑐 e₂)
   eSubstV𝑘 (sApp sub-v sub-w sub-k) = sApp (eSubstConV𝑘 sub-k)
                                            (eSubstValV𝑘 sub-v)
                                            (eSubstValV𝑘 sub-w)
@@ -67,31 +53,34 @@ mutual
                                              (eSubstV𝑘 sub-e)
 
 mutual
-  eSubstConVK𝑘 : {var : typ𝑘 → Set} {τ τ₁ τ₂ τ₃ τ₇ α β γ ζ : cpstyp} →
-                 {k₁ : var (dsT τ) → var (dsT (α ⇒[ (β ⇒ ζ) ]⇒ ζ)) →
-                       cpscont𝑐[ var ∘ dsT ] (τ₇ ⇒ τ₇) τ₃ (τ₁ ⇒ τ₂)} →
-                 {k₂ : cpscont𝑐[ var ∘ dsT ] (τ₇ ⇒ τ₇) τ₃ (τ₁ ⇒ τ₂)} →
-                 {v  : cpsvalue𝑐[ var ∘ dsT ] τ} →
-                 {c : cpscont𝑐[ var ∘ dsT ] (ζ ⇒ ζ) γ (α ⇒ β)} →
+  eSubstConVK𝑘 : {var : typ𝑘 → Set} {cvar : typ𝑘𝑐 → Set}
+                 {τ τ₁ τ₂ α β : cpstyp} →
+                 {k₁ : var (dsT τ) → cvar (dsT𝑐 (α ⇒ β)) →
+                       cpscont𝑐[ var ∘ dsT , cvar ∘ dsT𝑐 ] (τ₁ ⇒ τ₂)} →
+                 {k₂ : cpscont𝑐[ var ∘ dsT , cvar ∘ dsT𝑐 ] (τ₁ ⇒ τ₂)} →
+                 {v  : cpsvalue𝑐[ var ∘ dsT , cvar ∘ dsT𝑐 ] τ} →
+                 {c : cpscont𝑐[ var ∘ dsT , cvar ∘ dsT𝑐 ] (α ⇒ β)} →
                  cpsSubstCont𝑐 k₁ v c k₂ →
-                 SubstCon𝑘 {var} (λ y k′ → dsC𝑐 τ₁ τ₂ τ₃ τ₇ (k₁ y k′))
-                                 (dsV𝑐 τ v) (dsC𝑐 α β γ ζ c)
-                                 (dsC𝑐 τ₁ τ₂ τ₃ τ₇ k₂)
+                 SubstCon𝑘 {var} {cvar}
+                 (λ y k′ → dsC𝑐 (k₁ y k′))
+                 (dsV𝑐 v) (dsC𝑐 c)
+                 (dsC𝑐 k₂)
   eSubstConVK𝑘 sKVar=      = sCon=
   eSubstConVK𝑘 sKVar≠      = sCon≠
   eSubstConVK𝑘 sKId        = sHole
   eSubstConVK𝑘 (sKFun sub) = sLet (λ x → eSubstVK𝑘 (sub x))
   
-  eSubstVK𝑘 : {var : typ𝑘 → Set} {τ τ₁ τ₃ α β γ ζ  : cpstyp} →
-              {e₁ : var (dsT τ) → var (dsT (α ⇒[ (β ⇒ ζ) ]⇒ ζ)) →
-                    cpsterm𝑐[ var ∘ dsT ] (τ₃ ⇒ τ₃) τ₁} →
-              {e₂ : cpsterm𝑐[ var ∘ dsT ] (τ₃ ⇒ τ₃) τ₁} →
-              {v  : cpsvalue𝑐[ var ∘ dsT ] τ} →
-              {c : cpscont𝑐[ var ∘ dsT ] (ζ ⇒ ζ) γ (α ⇒ β)} →
+  eSubstVK𝑘 : {var : typ𝑘 → Set} {cvar : typ𝑘𝑐 → Set} {τ τ₁ α β : cpstyp} →
+              {e₁ : var (dsT τ) → cvar (dsT𝑐 (α ⇒ β)) →
+                    cpsterm𝑐[ var ∘ dsT , cvar ∘ dsT𝑐 ] τ₁} →
+              {e₂ : cpsterm𝑐[ var ∘ dsT , cvar ∘ dsT𝑐 ] τ₁} →
+              {v  : cpsvalue𝑐[ var ∘ dsT , cvar ∘ dsT𝑐 ] τ} →
+              {c : cpscont𝑐[ var ∘ dsT , cvar ∘ dsT𝑐 ] (α ⇒ β)} →
               cpsSubst𝑐 e₁ v c e₂ → 
-              Subst𝑘 {var} (λ y k′ → dsE𝑐 τ₁ τ₃ (e₁ y k′))
-                           (dsV𝑐 τ v) (dsC𝑐 α β γ ζ c)
-                           (dsE𝑐 τ₁ τ₃ e₂)
+              Subst𝑘 {var} {cvar}
+                     (λ y k′ → dsE𝑐 (e₁ y k′))
+                     (dsV𝑐 v) (dsC𝑐 c)
+                     (dsE𝑐 e₂)
   eSubstVK𝑘 (sApp sub-v sub-w sub-k) = sApp (eSubstConVK𝑘 sub-k)
                                             (eSubstValV𝑘 sub-v)
                                             (eSubstValV𝑘 sub-w)

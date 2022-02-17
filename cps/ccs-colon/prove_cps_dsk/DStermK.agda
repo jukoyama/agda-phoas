@@ -9,232 +9,211 @@ data typ𝑘 : Set where
   _⇒_cps[_,_]  : typ𝑘 → typ𝑘 → typ𝑘 → typ𝑘 → typ𝑘
 
 data typ𝑘𝑐 : Set where
-  _⇒_cps[_] : typ𝑘 → typ𝑘 → typ𝑘 → typ𝑘𝑐
+  _▷_ : typ𝑘 → typ𝑘 → typ𝑘𝑐
 
 -- source kernel term
 mutual
-  -- root を消した
-  
-  data value𝑘[_]_cps[τ,τ] (var : typ𝑘 → Set) : typ𝑘 → Set where
-    Num   : ℕ → value𝑘[ var ] Nat cps[τ,τ]
-    Var   : {τ₁ : typ𝑘} → var τ₁ → value𝑘[ var ] τ₁ cps[τ,τ]
-    Fun   : (τ₀ τ τ₁ τ₂ {τ₃ τ₄} : typ𝑘) →
-            (var τ₀ → var (τ₁ ⇒ τ₃ cps[ τ , τ ]) → term𝑘[ var ] τ₂ cps[ τ₂ , τ₄ ]) →
-            -- (var τ₂ → root𝑘[ var ] τ₁ cps[ τ₃ , τ₄ ]) →
-            value𝑘[ var ] (τ₀ ⇒ τ₁ cps[ τ₃ , τ₄ ]) cps[τ,τ]
+  data value𝑘[_,_]_cps[τ,τ] (var : typ𝑘 → Set) (cvar : typ𝑘𝑐 → Set)
+       : typ𝑘 → Set where
+    Num   : ℕ → value𝑘[ var , cvar ] Nat cps[τ,τ]
+    Var   : {τ₁ : typ𝑘} → var τ₁ → value𝑘[ var , cvar ] τ₁ cps[τ,τ]
+    Fun   : {τ₀ τ₁ τ₃ τ₄ : typ𝑘} →
+            (var τ₀ → cvar (τ₁ ▷ τ₃) → term𝑘[ var , cvar ] τ₄) →
+            value𝑘[ var , cvar ] (τ₀ ⇒ τ₁ cps[ τ₃ , τ₄ ]) cps[τ,τ]
     Shift : {τ τ₁ τ₂ τ₃ τ₄ : typ𝑘} →
-            value𝑘[ var ]
+            value𝑘[ var , cvar ]
              (((τ₃ ⇒ τ₄ cps[ τ , τ ]) ⇒ τ₁ cps[ τ₁ , τ₂ ])
                ⇒ τ₃ cps[ τ₄ , τ₂ ])
                cps[τ,τ]
 
-  data nonvalue𝑘[_]_cps[_,_] (var : typ𝑘 → Set) : typ𝑘 → typ𝑘 → typ𝑘 → Set where
-    App   : {τ₁ τ₂ τ₃ τ₄ : typ𝑘} →
-            value𝑘[ var ] τ₂ ⇒ τ₁ cps[ τ₃ , τ₄ ] cps[τ,τ] →
-            value𝑘[ var ] τ₂ cps[τ,τ] → 
-            nonvalue𝑘[ var ] τ₁ cps[ τ₃ , τ₄ ]
-    Reset : (τ₁ τ₂ τ₃ : typ𝑘) →
-            term𝑘[ var ] τ₁ cps[ τ₁ , τ₂ ] →
-            nonvalue𝑘[ var ] τ₂ cps[ τ₃ , τ₃ ]
+  data term𝑘[_,_]_ (var : typ𝑘 → Set) (cvar : typ𝑘𝑐 → Set)
+       : typ𝑘 → Set where
+    Ret  : {τ₁ τ₂ : typ𝑘} →
+           pcontext𝑘[ var , cvar ] (τ₁ ▷ τ₂) →
+           value𝑘[ var , cvar ] τ₁ cps[τ,τ] →
+           term𝑘[ var , cvar ] τ₂
+    App  : {τ₁ τ₂ τ₃ τ₄ : typ𝑘} →
+           value𝑘[ var , cvar ] τ₂ ⇒ τ₁ cps[ τ₃ , τ₄ ] cps[τ,τ] →
+           value𝑘[ var , cvar ] τ₂ cps[τ,τ] → 
+           pcontext𝑘[ var , cvar ] (τ₁ ▷ τ₃) →
+           term𝑘[ var , cvar ] τ₄
+    RetE : {τ₁ τ₂ : typ𝑘} →
+           pcontext𝑘[ var , cvar ] (τ₁ ▷ τ₂) →
+           term𝑘[ var , cvar ] τ₁ →
+           term𝑘[ var , cvar ] τ₂
 
--- kがresetまでのコンテキストを全部含んでいるので、pcontext𝑘の外側の継続はidentity
--- τ₅ を τ₄ にした
-  data term𝑘[_]_cps[_,_] (var : typ𝑘 → Set) : typ𝑘 → typ𝑘 → typ𝑘 → Set where
-    Val    : {τ₁ τ₂ τ₄ : typ𝑘} →
-             pcontext𝑘[ var , τ₁ cps[ τ₂ , τ₂ ]] τ₄
-                     cps[ τ₄ , τ₂ ] →
-             value𝑘[ var ] τ₁ cps[τ,τ] →
-             term𝑘[ var ] τ₄ cps[ τ₄ , τ₂ ]
-    NonVal : {τ₁ τ₂ τ₃ τ₄ : typ𝑘} →
-             pcontext𝑘[ var , τ₁ cps[ τ₂ , τ₃ ]] τ₄
-                     cps[ τ₄ , τ₃ ] →
-             nonvalue𝑘[ var ] τ₁ cps[ τ₂ , τ₃ ] →
-             term𝑘[ var ] τ₄ cps[ τ₄ , τ₃ ]
-               
-  data pcontext𝑘[_,_cps[_,_]]_cps[_,_] (var : typ𝑘 → Set)
-       : typ𝑘 → typ𝑘 → typ𝑘 → typ𝑘 → typ𝑘 → typ𝑘 → Set where
-    KHole : {τ₁ τ₂ τ₃ : typ𝑘} →
-            -- (v₁ : var (τ₂ ⇒ τ₁ cps[ τ₃ , τ₃ ])) →
-            (v₁ : var (τ₁ ⇒ τ₂ cps[ τ₂ , τ₂ ])) →
-            pcontext𝑘[ var , τ₁ cps[ τ₂ , τ₃ ]] τ₂ cps[ τ₂ , τ₃ ]
-    Hole  : {τ₁ τ₃ : typ𝑘} →
-            pcontext𝑘[ var , τ₁ cps[ τ₁ , τ₃ ]] τ₁ cps[ τ₁ , τ₃ ]
-    KLet  : {τ₁ τ₂ β γ : typ𝑘} →
-            (e₂ : var τ₁ → term𝑘[ var ] τ₂ cps[ τ₂ , β ]) →
-            pcontext𝑘[ var , τ₁ cps[ β , γ ]] τ₂ cps[ τ₂ , γ ]
+  data pcontext𝑘[_,_]_ (var : typ𝑘 → Set) (cvar : typ𝑘𝑐 → Set)
+       : typ𝑘𝑐 → Set where
+    KHole : {τ₁ τ₂ : typ𝑘} →
+            cvar (τ₁ ▷ τ₂) →
+            pcontext𝑘[ var , cvar ] (τ₁ ▷ τ₂)
+    Hole  : {τ₁ : typ𝑘} →
+            pcontext𝑘[ var , cvar ] (τ₁ ▷ τ₁)
+    KLet  : {τ₁ τ₂ : typ𝑘} →
+            (e₂ : var τ₁ → term𝑘[ var , cvar ] τ₂) →
+            pcontext𝑘[ var , cvar ] (τ₁ ▷ τ₂)
 
 -- mutual
-  data SubstValV𝑘 {var : typ𝑘 → Set} : {τ₁ τ₂ : typ𝑘} →
-                  (var τ₁ → value𝑘[ var ] τ₂ cps[τ,τ]) →
-                  value𝑘[ var ] τ₁ cps[τ,τ] →
-                  value𝑘[ var ] τ₂ cps[τ,τ] → Set where
-    sVar=  : {τ₁ : typ𝑘} {v : value𝑘[ var ] τ₁ cps[τ,τ]} →
-           SubstValV𝑘 (λ x → Var x) v v
-    sVar≠  : {τ₁ τ₂ : typ𝑘} {v : value𝑘[ var ] τ₂ cps[τ,τ]} {x : var τ₁} →
-           SubstValV𝑘 (λ _ → Var x) v (Var x)
-    sNum   : {τ₁ : typ𝑘} {v : value𝑘[ var ] τ₁ cps[τ,τ]} {n : ℕ} →
-           SubstValV𝑘 (λ _ → Num n) v (Num n)
-    sShift : {τ τ₁ τ₂ τ₃ τ₄ τ₅ : typ𝑘} {v : value𝑘[ var ] τ₅ cps[τ,τ]} →
-           SubstValV𝑘 (λ _ → Shift {τ = τ} {τ₁} {τ₂} {τ₃} {τ₄}) v Shift
-    sFun   : {τ′ τ₀ τ τ₁ τ₂ τ₃ τ₄ : typ𝑘} →
-             {e₁  : var τ′ → var τ₀ → var (τ₁ ⇒ τ₃ cps[ τ , τ ]) → 
-                    term𝑘[ var ] τ₂ cps[ τ₂ , τ₄ ]} →
-             {v   : value𝑘[ var ] τ′ cps[τ,τ]} →
-             {e₁′ : var τ₀ → var (τ₁ ⇒ τ₃ cps[ τ , τ ]) →
-                    term𝑘[ var ] τ₂ cps[ τ₂ , τ₄ ]} →
-             ((x : var τ₀) → (k : var (τ₁ ⇒ τ₃ cps[ τ , τ ])) →
+  data SubstValV𝑘 {var : typ𝑘 → Set} {cvar : typ𝑘𝑐 → Set} : {τ τ₁ : typ𝑘} →
+                  (var τ → value𝑘[ var , cvar ] τ₁ cps[τ,τ]) →
+                  value𝑘[ var , cvar ] τ cps[τ,τ] →
+                  value𝑘[ var , cvar ] τ₁ cps[τ,τ] → Set where
+    sVar=  : {τ : typ𝑘} {v : value𝑘[ var , cvar ] τ cps[τ,τ]} →
+             SubstValV𝑘 (λ x → Var x) v v
+    sVar≠  : {τ τ₁ : typ𝑘} {v : value𝑘[ var , cvar ] τ cps[τ,τ]} {x : var τ₁} →
+             SubstValV𝑘 (λ _ → Var x) v (Var x)
+    sNum   : {τ : typ𝑘} {v : value𝑘[ var , cvar ] τ cps[τ,τ]} {n : ℕ} →
+             SubstValV𝑘 (λ _ → Num n) v (Num n)
+    sShift : {τ₀ τ τ₁ τ₂ τ₃ τ₄ : typ𝑘} {v : value𝑘[ var , cvar ] τ₀ cps[τ,τ]} →
+             SubstValV𝑘 (λ _ → Shift {τ = τ} {τ₁} {τ₂} {τ₃} {τ₄}) v Shift
+    sFun   : {τ′ τ₀ τ₁ τ₃ τ₄ : typ𝑘} →
+             {e₁  : var τ′ → var τ₀ → cvar (τ₁ ▷ τ₃) → 
+                    term𝑘[ var , cvar ] τ₄} →
+             {v   : value𝑘[ var , cvar ] τ′ cps[τ,τ]} →
+             {e₁′ : var τ₀ → cvar (τ₁ ▷ τ₃) →
+                    term𝑘[ var , cvar ] τ₄} →
+             ((x : var τ₀) → (k : cvar (τ₁ ▷ τ₃)) →
               SubstV𝑘 (λ y → (e₁ y) x k) v (e₁′ x k)) →
-             SubstValV𝑘 (λ y → Fun τ₀ τ τ₁ τ₂ (λ x k → e₁ y x k))
+             SubstValV𝑘 (λ y → Fun (λ x k → e₁ y x k))
                         v
-                        (Fun τ₀ τ τ₁ τ₂ e₁′)
+                        (Fun e₁′)
 
-  data SubstConV𝑘 {var : typ𝑘 → Set} : {τ τ₁ τ₂ τ₃ τ₄ : typ𝑘} →
-                  (var τ → pcontext𝑘[ var , τ₁ cps[ τ₂ , τ₃ ]] τ₄
-                                    cps[ τ₄ , τ₃ ]) →
-                  value𝑘[ var ] τ cps[τ,τ] →
-                  pcontext𝑘[ var , τ₁ cps[ τ₂ , τ₃ ]] τ₄
-                          cps[ τ₄ , τ₃ ] → Set where
-    sConVar≠ : {τ τ₁ τ₂ τ₃ : typ𝑘} →
-               -- 型???
-               {k′ : var (τ₁ ⇒ τ₂ cps[ τ₂ , τ₂ ])} → 
-               {v : value𝑘[ var ] τ cps[τ,τ]} →
-               SubstConV𝑘 {τ₃ = τ₃} (λ _ → KHole k′) v (KHole k′)
-    sConId     : {τ τ₁ τ₃ : typ𝑘} →
-               {v : value𝑘[ var ] τ cps[τ,τ]} →
-               SubstConV𝑘 {τ₁ = τ₁} {τ₃ = τ₃} (λ _ → Hole) v Hole 
-    sConLet  : {τ τ₁ τ₂ β γ : typ𝑘} →
-               {e₁ : var τ → var τ₁ → term𝑘[ var ] τ₂ cps[ τ₂ , β ]} →  
-               {v  : value𝑘[ var ] τ cps[τ,τ]}→
-               {e₂ : var τ₁ → term𝑘[ var ] τ₂ cps[ τ₂ , β ]} →
+  data SubstConV𝑘 {var : typ𝑘 → Set} {cvar : typ𝑘𝑐 → Set} : {τ τ₁ τ₂ : typ𝑘} →
+                  (var τ → pcontext𝑘[ var , cvar ] (τ₁ ▷ τ₂)) →
+                  value𝑘[ var , cvar ] τ cps[τ,τ] →
+                  pcontext𝑘[ var , cvar ] (τ₁ ▷ τ₂) → Set where
+    sConVar≠ : {τ τ₁ τ₂ : typ𝑘} →
+               {k′ : cvar (τ₁ ▷ τ₂)} → 
+               {v : value𝑘[ var , cvar ] τ cps[τ,τ]} →
+               SubstConV𝑘 (λ _ → KHole k′) v (KHole k′)
+    sConId   : {τ τ₁ : typ𝑘} →
+               {v : value𝑘[ var , cvar ] τ cps[τ,τ]} →
+               SubstConV𝑘 {τ₁ = τ₁} (λ _ → Hole) v Hole 
+    sConLet  : {τ τ₁ τ₂ : typ𝑘} →
+               {e₁ : var τ → var τ₁ → term𝑘[ var , cvar ] τ₂} →  
+               {v  : value𝑘[ var , cvar ] τ cps[τ,τ]}→
+               {e₂ : var τ₁ → term𝑘[ var , cvar ] τ₂} →
                ((x : var τ₁) → SubstV𝑘 (λ y → (e₁ y) x) v (e₂ x)) → 
-               SubstConV𝑘 {τ₃ = γ} (λ y → KLet (λ x → (e₁ y) x))
+               SubstConV𝑘 (λ y → KLet (λ x → (e₁ y) x))
                           v
                           (KLet (λ x → e₂ x)) 
 
-
-  data SubstV𝑘 {var : typ𝑘 → Set} : {τ₁ τ₂ τ₄ : typ𝑘} →
-               (var τ₁ → term𝑘[ var ] τ₂ cps[ τ₂ , τ₄ ]) →
-               value𝑘[ var ] τ₁ cps[τ,τ] →
-               term𝑘[ var ] τ₂ cps[ τ₂ , τ₄ ] → Set where
-    sVal   : {τ τ₁ τ₂ τ₄ : typ𝑘} →
+  data SubstV𝑘 {var : typ𝑘 → Set} {cvar : typ𝑘𝑐 → Set} : {τ₁ τ₂ : typ𝑘} →
+               (var τ₁ → term𝑘[ var , cvar ] τ₂) →
+               value𝑘[ var , cvar ] τ₁ cps[τ,τ] →
+               term𝑘[ var , cvar ] τ₂ → Set where
+  　-- sRet にあとで改名
+    sVal   : {τ τ₁ τ₂ : typ𝑘} →
              {k₁ : var τ →
-                   pcontext𝑘[ var , τ₁ cps[ τ₂ , τ₂ ]] τ₄
-                          cps[ τ₄ , τ₂ ]} →
-             {v₁ : var τ → value𝑘[ var ] τ₁ cps[τ,τ]} → 
-             {v : value𝑘[ var ] τ cps[τ,τ]} →
-             {k₂ : pcontext𝑘[ var , τ₁ cps[ τ₂ , τ₂ ]] τ₄
-                          cps[ τ₄ , τ₂ ]} →
-             {v₂ : value𝑘[ var ] τ₁ cps[τ,τ]} →
-             SubstConV𝑘 k₁ v k₂ → SubstValV𝑘 v₁ v v₂ → 
-             SubstV𝑘 (λ y → Val (k₁ y) (v₁ y)) v (Val k₂ v₂)
-    sApp   : {τ τ₁ τ₂ τ₃ τ₄ τ₅ : typ𝑘} →
+                   pcontext𝑘[ var , cvar ] (τ₁ ▷ τ₂)} →
+             {v₁ : var τ → value𝑘[ var , cvar ] τ₁ cps[τ,τ]} → 
+             {v : value𝑘[ var , cvar ] τ cps[τ,τ]} →
+             {k₂ : pcontext𝑘[ var , cvar ] (τ₁ ▷ τ₂)} →
+             {v₂ : value𝑘[ var , cvar ] τ₁ cps[τ,τ]} →
+             SubstConV𝑘 k₁ v k₂ → SubstValV𝑘 v₁ v v₂ →
+             SubstV𝑘 (λ y → Ret (k₁ y) (v₁ y)) v (Ret k₂ v₂)
+    sApp   : {τ τ₁ τ₂ τ₃ τ₄ : typ𝑘} →
              {k₁ : var τ →
-                   pcontext𝑘[ var , τ₁ cps[ τ₃ , τ₄ ]] τ₅
-                           cps[ τ₅ , τ₄ ]} → 
-             {v₁ : var τ → value𝑘[ var ] τ₂ ⇒ τ₁ cps[ τ₃ , τ₄ ] cps[τ,τ]} →
-             {w₁ : var τ → value𝑘[ var ] τ₂ cps[τ,τ]} →
-             {v  : value𝑘[ var ] τ cps[τ,τ]} →
-             {k₂ : pcontext𝑘[ var , τ₁ cps[ τ₃ , τ₄ ]] τ₅
-                           cps[ τ₅ , τ₄ ]} → 
-             {v₂ : value𝑘[ var ] τ₂ ⇒ τ₁ cps[ τ₃ , τ₄ ] cps[τ,τ]} →
-             {w₂ : value𝑘[ var ] τ₂ cps[τ,τ]} →
+                   pcontext𝑘[ var , cvar ] (τ₁ ▷ τ₃)} → 
+             {v₁ : var τ → value𝑘[ var , cvar ] τ₂ ⇒ τ₁ cps[ τ₃ , τ₄ ] cps[τ,τ]} →
+             {w₁ : var τ → value𝑘[ var , cvar ] τ₂ cps[τ,τ]} →
+             {v  : value𝑘[ var , cvar ] τ cps[τ,τ]} →
+             {k₂ : pcontext𝑘[ var , cvar ] (τ₁ ▷ τ₃)} → 
+             {v₂ : value𝑘[ var , cvar ] τ₂ ⇒ τ₁ cps[ τ₃ , τ₄ ] cps[τ,τ]} →
+             {w₂ : value𝑘[ var , cvar ] τ₂ cps[τ,τ]} →
              SubstConV𝑘 k₁ v k₂ → SubstValV𝑘 v₁ v v₂ → SubstValV𝑘 w₁ v w₂ → 
-             SubstV𝑘 (λ y → NonVal (k₁ y) (App (v₁ y) (w₁ y)))
+             SubstV𝑘 (λ y → (App (v₁ y) (w₁ y) (k₁ y)))
                     v
-                    (NonVal k₂ (App v₂ w₂))
-    sReset : {τ τ₁ τ₂ τ₃ τ₅ : typ𝑘} →
+                    (App v₂ w₂ k₂)
+    -- sRetE にあとで改名
+    sReset : {τ τ₁ τ₂ : typ𝑘} →
              {k₁ : var τ →
-                   pcontext𝑘[ var , τ₂ cps[ τ₃ , τ₃ ]] τ₅
-                           cps[ τ₅ , τ₃ ]} →
-             {e₁ : var τ → term𝑘[ var ] τ₁ cps[ τ₁ , τ₂ ]} → 
-             {v  : value𝑘[ var ] τ cps[τ,τ]} →
-             {k₂ : pcontext𝑘[ var , τ₂ cps[ τ₃ , τ₃ ]] τ₅
-                           cps[ τ₅ , τ₃ ]} →
-             {e₂ : term𝑘[ var ] τ₁ cps[ τ₁ , τ₂ ]} →
+                   pcontext𝑘[ var , cvar ] (τ₁ ▷ τ₂)} →
+             {e₁ : var τ → term𝑘[ var , cvar ] τ₁} → 
+             {v  : value𝑘[ var , cvar ] τ cps[τ,τ]} →
+             {k₂ : pcontext𝑘[ var , cvar ] (τ₁ ▷ τ₂)} →
+             {e₂ : term𝑘[ var , cvar ] τ₁} →
              SubstConV𝑘 k₁ v k₂ → SubstV𝑘 e₁ v e₂ → 
-             SubstV𝑘 (λ y → NonVal (k₁ y) (Reset τ₁ τ₂ τ₃ (e₁ y)))
-                    v
-                    (NonVal k₂ (Reset τ₁ τ₂ τ₃ e₂))
+             SubstV𝑘 (λ y → (RetE (k₁ y) (e₁ y)))
+                     v
+                     (RetE k₂ e₂)
 
 mutual
-  data SubstCon𝑘 {var : typ𝑘 → Set} : {τ τ₁ τ₂ τ₃ τ₇ α β γ ζ : typ𝑘} →
-                 (var τ → var (α ⇒ β cps[ ζ , ζ ]) →
-                   pcontext𝑘[ var , τ₁ cps[ τ₂ , τ₃ ]] τ₇ cps[ τ₇ , τ₃ ]) →
-                 value𝑘[ var ] τ cps[τ,τ] →
-                 pcontext𝑘[ var , α cps[ β , γ ]] ζ cps[ ζ , γ ] →
-                 pcontext𝑘[ var , τ₁ cps[ τ₂ , τ₃ ]] τ₇ cps[ τ₇ , τ₃ ] → Set where
-
-    sCon= : {τ τ₁ τ₂ τ₃ : typ𝑘} →
-            {v  : value𝑘[ var ] τ cps[τ,τ]} → 
-            {K𝑐 : pcontext𝑘[ var , τ₁ cps[ τ₂ , τ₃ ]] τ₂ cps[ τ₂ , τ₃ ]} →
+  data SubstCon𝑘 {var : typ𝑘 → Set} {cvar : typ𝑘𝑐 → Set} : {τ τ₁ τ₂ α β : typ𝑘} →
+                 (var τ → cvar (α ▷ β) →
+                  pcontext𝑘[ var , cvar ] (τ₁ ▷ τ₂)) →
+                 value𝑘[ var , cvar ] τ cps[τ,τ] →
+                 pcontext𝑘[ var , cvar ] (α ▷ β) →
+                 pcontext𝑘[ var , cvar ] (τ₁ ▷ τ₂) → Set where
+    sCon= : {τ α β : typ𝑘} →
+            {v  : value𝑘[ var , cvar ] τ cps[τ,τ]} → 
+            {K𝑐 : pcontext𝑘[ var , cvar ] (α ▷ β)} →
             SubstCon𝑘 (λ _ k → KHole k) v K𝑐 K𝑐
-    sCon≠ : {τ τ₁ τ₂ τ₅ α β γ ζ : typ𝑘} →
-            {v  : value𝑘[ var ] τ cps[τ,τ]} → 
-            {K𝑐 : pcontext𝑘[ var , α cps[ β , γ ]] ζ cps[ ζ , γ ]} →
-            {k′ : var (τ₂ ⇒ τ₁ cps[ τ₁ , τ₁ ])} → 
-            SubstCon𝑘 {τ₃ = τ₅} (λ _ _ → KHole k′) v K𝑐 (KHole k′)
-    sHole : {τ τ₁ τ₃ α β γ ζ : typ𝑘} →
-            {v  : value𝑘[ var ] τ cps[τ,τ]} → 
-            {K𝑐 : pcontext𝑘[ var , α cps[ β , γ ]] ζ cps[ ζ , γ ]} → 
-            SubstCon𝑘 {τ₁ = τ₁} {τ₃ = τ₃} (λ _ _ → Hole) v K𝑐 Hole
-    sLet  : {τ τ₁ τ₂ τ₃ τ₄ α β γ ζ : typ𝑘} →            
-            {e  : var τ → var (α ⇒ β cps[ ζ , ζ ]) → (var τ₁ → term𝑘[ var ] τ₄ cps[ τ₄ , τ₂ ])} →
-            {v  : value𝑘[ var ] τ cps[τ,τ]} → 
-            {K𝑐 : pcontext𝑘[ var , α cps[ β , γ ]] ζ cps[ ζ , γ ]} →
-            {e′ : var τ₁ → term𝑘[ var ] τ₄ cps[ τ₄ , τ₂ ]} →
+    sCon≠ : {τ τ₁ τ₂ α β : typ𝑘} →
+            {v  : value𝑘[ var , cvar ] τ cps[τ,τ]} → 
+            {K𝑐 : pcontext𝑘[ var , cvar ] (α ▷ β)} →
+            {k′ : cvar (τ₁ ▷ τ₂)} → 
+            SubstCon𝑘 (λ _ _ → KHole k′) v K𝑐 (KHole k′)
+    sHole : {τ τ₁ α β : typ𝑘} →
+            {v  : value𝑘[ var , cvar ] τ cps[τ,τ]} → 
+            {K𝑐 : pcontext𝑘[ var , cvar ] (α ▷ β)} → 
+            SubstCon𝑘 {τ₁ = τ₁} (λ _ _ → Hole) v K𝑐 Hole
+    sLet  : {τ τ₁ τ₂ α β : typ𝑘} →            
+            {e  : var τ → cvar (α ▷ β) →
+                  (var τ₁ → term𝑘[ var , cvar ] τ₂)} →
+            {v  : value𝑘[ var , cvar ] τ cps[τ,τ]} → 
+            {K𝑐 : pcontext𝑘[ var , cvar ] (α ▷ β)} →
+            {e′ : var τ₁ → term𝑘[ var , cvar ] τ₂} →
             ((x : var τ₁) → Subst𝑘 (λ y k′ → (e y k′) x) v K𝑐 (e′ x)) → 
-            SubstCon𝑘 {τ₃ = τ₃} (λ y k′ → KLet (e y k′))
+            SubstCon𝑘 (λ y k′ → KLet (e y k′))
                                  v K𝑐
                                  (KLet e′)
 
-  data Subst𝑘 {var : typ𝑘 → Set} : {τ τ₂ τ₃ α β γ ζ : typ𝑘} →
-              (var τ → var (α ⇒ β cps[ ζ , ζ ]) → term𝑘[ var ] τ₂ cps[ τ₂ , τ₃ ]) →
-              value𝑘[ var ] τ cps[τ,τ] →
-              pcontext𝑘[ var , α cps[ β , γ ]] ζ cps[ ζ , γ ] → 
-              term𝑘[ var ] τ₂ cps[ τ₂ , τ₃ ] → Set where
-    sVal  : {τ τ₁ τ₂ τ₄ α β γ ζ : typ𝑘} →
-               {k₁ : var τ → var (α ⇒ β cps[ ζ , ζ ]) →
-                   pcontext𝑘[ var , τ₁ cps[ τ₂ , τ₂ ]] τ₄
-                           cps[ τ₄ , τ₂ ]} →
-               {v₁ : var τ → value𝑘[ var ] τ₁ cps[τ,τ]} →
-               {v  : value𝑘[ var ] τ cps[τ,τ]} →
-               {K𝑐 : pcontext𝑘[ var , α cps[ β , γ ]] ζ cps[ ζ , γ ]} →
-               {k₂ : pcontext𝑘[ var , τ₁ cps[ τ₂ , τ₂ ]] τ₄
-                             cps[ τ₄ , τ₂ ]} →
-               {v₂ : value𝑘[ var ] τ₁ cps[τ,τ]} →
-               SubstCon𝑘 k₁ v K𝑐 k₂ → SubstValV𝑘 v₁ v v₂ → 
-               Subst𝑘 (λ y k′ → Val (k₁ y k′) (v₁ y)) v K𝑐 (Val k₂ v₂)
-    sApp   : {τ τ₁ τ₂ τ₃ τ₄ τ₅ α β γ ζ : typ𝑘} →
-             {k₁ : var τ → var (α ⇒ β cps[ ζ , ζ ]) → 
-                   pcontext𝑘[ var , τ₁ cps[ τ₃ , τ₄ ]] τ₅
-                           cps[ τ₅ , τ₄ ]} → 
-             {v₁ : var τ → value𝑘[ var ] τ₂ ⇒ τ₁ cps[ τ₃ , τ₄ ] cps[τ,τ]} →
-             {w₁ : var τ → value𝑘[ var ] τ₂ cps[τ,τ]} →
-             {v  : value𝑘[ var ] τ cps[τ,τ]} →
-             {K𝑐 : pcontext𝑘[ var , α cps[ β , γ ]] ζ cps[ ζ , γ ]} → 
-             {k₂ : pcontext𝑘[ var , τ₁ cps[ τ₃ , τ₄ ]] τ₅
-                           cps[ τ₅ , τ₄ ]} → 
-             {v₂ : value𝑘[ var ] τ₂ ⇒ τ₁ cps[ τ₃ , τ₄ ] cps[τ,τ]} →
-             {w₂ : value𝑘[ var ] τ₂ cps[τ,τ]} →
+  data Subst𝑘 {var : typ𝑘 → Set} {cvar : typ𝑘𝑐 → Set} : {τ τ₁ α β : typ𝑘} →
+              (var τ → cvar (α ▷ β) → term𝑘[ var , cvar ] τ₁) →
+              value𝑘[ var , cvar ] τ cps[τ,τ] →
+              pcontext𝑘[ var , cvar ] (α ▷ β) → 
+              term𝑘[ var , cvar ] τ₁ → Set where
+    -- sRet にあとで改名
+    sVal  : {τ τ₁ τ₂ α β : typ𝑘} →
+            {k₁ : var τ → cvar (α ▷ β) →
+                   pcontext𝑘[ var , cvar ] (τ₁ ▷ τ₂)} →
+            {v₁ : var τ → value𝑘[ var , cvar ] τ₁ cps[τ,τ]} →
+            {v  : value𝑘[ var , cvar ] τ cps[τ,τ]} →
+            {K𝑐 : pcontext𝑘[ var , cvar ] (α ▷ β)} →
+            {k₂ : pcontext𝑘[ var , cvar ] (τ₁ ▷ τ₂)} →
+            {v₂ : value𝑘[ var , cvar ] τ₁ cps[τ,τ]} →
+            SubstCon𝑘 k₁ v K𝑐 k₂ → SubstValV𝑘 v₁ v v₂ → 
+            Subst𝑘 (λ y k′ → Ret (k₁ y k′) (v₁ y)) v K𝑐 (Ret k₂ v₂)
+    sApp   : {τ τ₁ τ₂ τ₃ τ₄ α β : typ𝑘} →
+             {k₁ : var τ → cvar (α ▷ β) → 
+                   pcontext𝑘[ var , cvar ] (τ₁ ▷ τ₃)} → 
+             {v₁ : var τ → value𝑘[ var , cvar ] τ₂ ⇒ τ₁ cps[ τ₃ , τ₄ ] cps[τ,τ]} →
+             {w₁ : var τ → value𝑘[ var , cvar ] τ₂ cps[τ,τ]} →
+             {v  : value𝑘[ var , cvar ] τ cps[τ,τ]} →
+             {K𝑐 : pcontext𝑘[ var , cvar ] (α ▷ β)} → 
+             {k₂ : pcontext𝑘[ var , cvar ] (τ₁ ▷ τ₃)} → 
+             {v₂ : value𝑘[ var , cvar ] τ₂ ⇒ τ₁ cps[ τ₃ , τ₄ ] cps[τ,τ]} →
+             {w₂ : value𝑘[ var , cvar ] τ₂ cps[τ,τ]} →
              SubstCon𝑘 k₁ v K𝑐 k₂ → SubstValV𝑘 v₁ v v₂ → SubstValV𝑘 w₁ v w₂ → 
-             Subst𝑘 (λ y k′  → NonVal (k₁ y k′) (App (v₁ y) (w₁ y)))
+             Subst𝑘 (λ y k′  → (App (v₁ y) (w₁ y) (k₁ y k′)))
                     v K𝑐
-                    (NonVal k₂ (App v₂ w₂))
-    sReset : {τ τ₁ τ₂ τ₃ τ₅ α β γ ζ : typ𝑘} →
-             {k₁ : var τ → var (α ⇒ β cps[ ζ , ζ ]) → 
-                   pcontext𝑘[ var , τ₂ cps[ τ₃ , τ₃ ]] τ₅
-                           cps[ τ₅ , τ₃ ]} →
-             {e₁ : var τ → var (α ⇒ β cps[ ζ , ζ ]) → term𝑘[ var ] τ₁ cps[ τ₁ , τ₂ ]} → 
-             {v  : value𝑘[ var ] τ cps[τ,τ]} →
-             {K𝑐 : pcontext𝑘[ var , α cps[ β , γ ]] ζ cps[ ζ , γ ]} → 
-             {k₂ : pcontext𝑘[ var , τ₂ cps[ τ₃ , τ₃ ]] τ₅
-                           cps[ τ₅ , τ₃ ]} →
-             {e₂ : term𝑘[ var ] τ₁ cps[ τ₁ , τ₂ ]} →
+                    (App v₂ w₂ k₂)
+    -- sRetE にあとで改名
+    sReset : {τ τ₁ τ₂ α β : typ𝑘} →
+             {k₁ : var τ → cvar (α ▷ β) → 
+                   pcontext𝑘[ var , cvar ] (τ₁ ▷ τ₂)} →
+             {e₁ : var τ → cvar (α ▷ β) → term𝑘[ var , cvar ] τ₁} → 
+             {v  : value𝑘[ var , cvar ] τ cps[τ,τ]} →
+             {K𝑐 : pcontext𝑘[ var , cvar ] (α ▷ β)} → 
+             {k₂ : pcontext𝑘[ var , cvar ] (τ₁ ▷ τ₂)} →
+             {e₂ : term𝑘[ var , cvar ] τ₁} →
              SubstCon𝑘 k₁ v K𝑐 k₂ → Subst𝑘 e₁ v K𝑐 e₂ → 
-             Subst𝑘 (λ y k′ → NonVal (k₁ y k′) (Reset τ₁ τ₂ τ₃ (e₁ y k′)))
+             Subst𝑘 (λ y k′ → (RetE (k₁ y k′) (e₁ y k′)))
                     v K𝑐 
-                    (NonVal k₂ (Reset τ₁ τ₂ τ₃ e₂))
+                    (RetE k₂ e₂)
 
+{-
 data ReduceRoot𝑘 {var : typ𝑘 → Set} :
                  {τ τ₁ τ₂ τ₃ τ₄ : typ𝑘} →
                  (var (τ₁ ⇒ τ₃ cps[ τ , τ ]) → term𝑘[ var ] τ₂ cps[ τ₂ , τ₄ ]) →
@@ -255,73 +234,65 @@ data ReduceRoot𝑘 {var : typ𝑘 → Set} :
                                          NonVal Hole (Reset τ₂ τ₄ τ₄ (e x k′))))
                                     v))))
                 (λ k → NonVal Hole (Reset τ₂ τ₄ τ₄ e′))
+-}
 
-data ReduceTerm𝑘 {var : typ𝑘 → Set} :
-                 {τ₂ τ₃ : typ𝑘} →
-                 term𝑘[ var ] τ₂ cps[ τ₂ , τ₃ ] →
-                 term𝑘[ var ] τ₂ cps[ τ₂ , τ₃ ] → Set where
-     βVal : {τ₀ τ₁ τ₂ τ₃ τ₄ : typ𝑘} →
-             {K𝑐 : pcontext𝑘[ var , τ₁ cps[ τ₃ , τ₄ ]] τ₂ cps[ τ₂ , τ₄ ]} →
-             {e  : var τ₀ → var (τ₁ ⇒ τ₃ cps[ τ₂ , τ₂ ]) →
-                   term𝑘[ var ] τ₂ cps[ τ₂ , τ₄ ]} →
-             {v  : value𝑘[ var ] τ₀ cps[τ,τ]} →
-             {e′ : term𝑘[ var ] τ₂ cps[ τ₂ , τ₄ ]} →
-             Subst𝑘 e v K𝑐 e′ →
-             ReduceTerm𝑘 (NonVal K𝑐 (App (Fun τ₀ τ₂ τ₁ τ₂ (λ x k′ →
-                                              e x k′))
-                                         v))
-                         e′
-
-     βLet : {τ₁ τ₂ β : typ𝑘} →
-             {e₂  : var τ₁ → term𝑘[ var ] τ₂ cps[ τ₂ , β ]} →
-             {v   : value𝑘[ var ] τ₁ cps[τ,τ]} →
-             {e₂′ : term𝑘[ var ] τ₂ cps[ τ₂ , β ]} →
-             SubstV𝑘 (λ x → e₂ x) v e₂′ → 
-             ReduceTerm𝑘 (Val (KLet e₂) v) e₂′
-
-data ReduceTerm𝑘𝑠 {var : typ𝑘 → Set} : 
-                  {τ₂ τ₃ : typ𝑘} →
-                  term𝑘[ var ] τ₂ cps[ τ₂ , τ₃ ] →
-                  term𝑘[ var ] τ₂ cps[ τ₂ , τ₃ ] → Set where
-     βShift : {τ₁ τ₃ τ₄ : typ𝑘} →
-               {J : pcontext𝑘[ var , τ₃ cps[ τ₄ , τ₄ ]] τ₁ cps[ τ₁ , τ₄ ]} →
-               {w : value𝑘[ var ] (τ₃ ⇒ τ₄ cps[ τ₃ , τ₃ ]) ⇒ τ₁ cps[ τ₁ , τ₄ ] cps[τ,τ]} →
-               ReduceTerm𝑘𝑠
-                 (NonVal Hole (Reset τ₁ τ₄ τ₄
-                         (NonVal J
-                                 (App Shift w))))
-                 (NonVal Hole (Reset τ₁ τ₄ τ₄
-                         (NonVal Hole
-                                 (App w
-                                      (Fun τ₃ τ₃ τ₄ τ₃ λ y k →
-                                           NonVal (KHole k)
-                                                  (Reset τ₁ τ₄ τ₃ (Val J (Var y))))))))
-                                                                        
-data ReduceTerm𝑘𝑅 {var : typ𝑘 → Set} :
-                  {τ₂ : typ𝑘} →
-                  term𝑘[ var ] τ₂ cps[ τ₂ , τ₂ ] →
-                  value𝑘[ var ] τ₂ cps[τ,τ] → Set where
-     βReset : {τ₁ : typ𝑘} →
-               {v : value𝑘[ var ] τ₁ cps[τ,τ]} →
-               ReduceTerm𝑘𝑅 (NonVal Hole (Reset τ₁ τ₁ τ₁ (Val Hole v)))
-                            v
-                    
-
-data ReduceVal𝑘 {var : typ𝑘 → Set} :
+data ReduceTerm𝑘 {var : typ𝑘 → Set} {cvar : typ𝑘𝑐 → Set} :
                  {τ₁ : typ𝑘} →
-                 value𝑘[ var ] τ₁ cps[τ,τ] →
-                 value𝑘[ var ] τ₁ cps[τ,τ] → Set where
+                 term𝑘[ var , cvar ] τ₁ →
+                 term𝑘[ var , cvar ] τ₁ → Set where
+     βVal : {τ₀ τ₁ τ₃ τ₄ : typ𝑘} →
+             {K𝑐 : pcontext𝑘[ var , cvar ] (τ₁ ▷ τ₃)} →
+             {e  : var τ₀ → cvar (τ₁ ▷ τ₃) →
+                   term𝑘[ var , cvar ] τ₄} →
+             {v  : value𝑘[ var , cvar ] τ₀ cps[τ,τ]} →
+             {e′ : term𝑘[ var , cvar ] τ₄} →
+             Subst𝑘 e v K𝑐 e′ →
+             ReduceTerm𝑘 (App (Fun (λ x k′ → e x k′)) v K𝑐)
+                         e′
+     βLet : {τ₁ τ₂ : typ𝑘} →
+             {e₂  : var τ₁ → term𝑘[ var , cvar ] τ₂} →
+             {v   : value𝑘[ var , cvar ] τ₁ cps[τ,τ]} →
+             {e₂′ : term𝑘[ var , cvar ] τ₂} →
+             SubstV𝑘 (λ x → e₂ x) v e₂′ → 
+             ReduceTerm𝑘 (Ret (KLet e₂) v) e₂′
+
+data ReduceTerm𝑘𝑠 {var : typ𝑘 → Set} {cvar : typ𝑘𝑐 → Set} : 
+                  {τ₁ : typ𝑘} →
+                  term𝑘[ var , cvar ] τ₁ →
+                  term𝑘[ var , cvar ] τ₁ → Set where
+     βShift : {τ₁ τ₃ τ₄ : typ𝑘} →
+               {J : pcontext𝑘[ var , cvar ] (τ₃ ▷ τ₄)} →
+               {w : value𝑘[ var , cvar ] (τ₃ ⇒ τ₄ cps[ τ₃ , τ₃ ]) ⇒ τ₁ cps[ τ₁ , τ₄ ] cps[τ,τ]} →
+               ReduceTerm𝑘𝑠 (RetE Hole
+                                  (App Shift w J))
+                            (RetE Hole
+                                  (App w (Fun (λ y k → RetE (KHole k) (Ret J (Var y)))) Hole))
+                                                                        
+data ReduceTerm𝑘𝑅 {var : typ𝑘 → Set} {cvar : typ𝑘𝑐 → Set} :
+                  {τ₂ : typ𝑘} →
+                  term𝑘[ var , cvar ] τ₂ →
+                  value𝑘[ var , cvar ] τ₂ cps[τ,τ] → Set where
+     βReset : {τ₁ : typ𝑘} →
+               {v : value𝑘[ var , cvar ] τ₁ cps[τ,τ]} →
+               ReduceTerm𝑘𝑅 (RetE Hole (Ret Hole v))
+                            v
+
+-- ReduceV𝑘 にあとで改名
+data ReduceVal𝑘 {var : typ𝑘 → Set} {cvar : typ𝑘𝑐 → Set} :
+                 {τ₁ : typ𝑘} →
+                 value𝑘[ var , cvar ] τ₁ cps[τ,τ] →
+                 value𝑘[ var , cvar ] τ₁ cps[τ,τ] → Set where
      ηVal : {τ₀ τ₁ τ₃ τ₄ : typ𝑘} →
-             {v : value𝑘[ var ] τ₀ ⇒ τ₁ cps[ τ₃ , τ₄ ] cps[τ,τ]} →
-             ReduceVal𝑘 (Fun τ₀ τ₃ τ₁ τ₃ (λ x k →
-                             NonVal (KHole k) (App v (Var x))))
+             {v : value𝑘[ var , cvar ] τ₀ ⇒ τ₁ cps[ τ₃ , τ₄ ] cps[τ,τ]} →
+             ReduceVal𝑘 (Fun (λ x k →
+                             (App v (Var x) (KHole k))))
                         v
 
-data ReduceCon𝑘 {var : typ𝑘 → Set} :
-                {τ₁ τ₂ τ₃ τ₇ : typ𝑘} →
-                 pcontext𝑘[ var , τ₁ cps[ τ₂ , τ₃ ]] τ₇ cps[ τ₇ , τ₃ ] →
-                 pcontext𝑘[ var , τ₁ cps[ τ₂ , τ₃ ]] τ₇ cps[ τ₇ , τ₃ ] → Set where
-     ηLet : {τ₁ τ₂ β : typ𝑘} →
-             {K𝑐 : pcontext𝑘[ var , τ₁ cps[ β , β ]] τ₂ cps[ τ₂ , β ]} → 
-             ReduceCon𝑘 (KLet (λ x → Val K𝑐 (Var x)))
+data ReduceCon𝑘 {var : typ𝑘 → Set} {cvar : typ𝑘𝑐 → Set} :
+                {τ₁ τ₂ : typ𝑘} →
+                 pcontext𝑘[ var , cvar ] (τ₁ ▷ τ₂) →
+                 pcontext𝑘[ var , cvar ] (τ₁ ▷ τ₂) → Set where
+     ηLet : {τ₁ τ₂ : typ𝑘} →
+             {K𝑐 : pcontext𝑘[ var , cvar ] (τ₁ ▷ τ₂)} → 
+             ReduceCon𝑘 (KLet (λ x → Ret K𝑐 (Var x)))
                         K𝑐
